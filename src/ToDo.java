@@ -7,7 +7,7 @@ public class ToDo {
     private String url;
     private String titolo;
     private String sfondo;
-    private String descrizione;
+    private String descrizioneToDo;
     private String coloreSfondo;
     private LocalDate dataScadenza;
     private Bacheca bacheca;
@@ -19,11 +19,16 @@ public class ToDo {
     public void setUrl(String url){ this.url=url; }
     public void setTitolo(String titolo){ this.titolo=titolo; }
     public void setSfondo(String sfondo){ this.sfondo=sfondo; }
-    public void setDescrizione(String descrizione){ this.descrizione=descrizione; }
+    public void setDescrizioneToDo(String descrizione){ this.descrizioneToDo=descrizioneToDo; }
     public void setColoreSfondo(String coloreSfondo){ this.coloreSfondo=coloreSfondo; }
     public void setDataScadenza(String dataScadenza){ this.dataScadenza=LocalDate.parse(dataScadenza); }
     public void setBacheca(Bacheca bacheca){ this.bacheca=bacheca; }
     public void setStato(String stato){ this.stato=StatoToDo.NonCompletato; }
+
+
+    public String getDescrizioneToDo(){
+        return descrizioneToDo;
+    }
 
     public String getTitoloToDo() {
         return titolo;
@@ -49,7 +54,7 @@ public class ToDo {
     }
 
     // Rimuovi un utente dalla lista di condivisione (solo se l'utente è già condiviso)
-    public void rimuoviCondivisione(Utente utente) {
+    public void eliminaCondivisione(Utente utente) {
         if (!condivisoCon.contains(utente)) {
             System.out.println(utente.getUsername() + " non ha accesso al ToDo.");
             return;
@@ -69,7 +74,7 @@ public class ToDo {
     }
 
     // Metodo per visualizzare il ToDo, evidenziando quelli scaduti
-    public void visualizza() {
+    public void visualizzascadenza() {
         if (verificaScadenzaOggi()) {
             System.out.println(titolo + " (Scadenza Oggi)");
         } else if (verificaScadenzaEntro(LocalDate.now())) {

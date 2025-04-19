@@ -15,6 +15,8 @@ public class Bacheca {
         this.listaToDo=new ArrayList<>();
     }
 
+
+
     public List<ToDo> getListaToDo(){
         return listaToDo;
     }
