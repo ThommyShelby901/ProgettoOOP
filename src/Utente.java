@@ -5,44 +5,21 @@ import java.util.Scanner;
 public class Utente {
     private final String username;
     private final String password;
-    public List<ToDo> listaToDo;
-    private static final Scanner scanner=new Scanner(System.in);
+    private List<ToDo> listaToDo;
+    private static final Scanner scanner = new Scanner(System.in);
 
-    public Utente(String username, String password){
+    public Utente(String username, String password) {
         this.username = username;
         this.password = password;
         this.listaToDo = new ArrayList<>();
     }
 
-    public String getUsername(){
+    public String getUsername() {
         return username;
     }
 
-    public final void aggiungiToDoCondiviso(ToDo todo) {
-        if (!listaToDo.contains(todo)) {
-            listaToDo.add(todo);
-        }
-    }
-
-    // Rimuovi un ToDo dalla lista dell'utente (cioè quando la condivisione è rimossa)
-    public void rimuoviToDoCondiviso(ToDo todo) {
-        listaToDo.remove(todo);
-    }
-
-    // Visualizza i ToDo condivisi con l'utente
-    public void mostraToDoCondivisi() {
-        if (listaToDo.isEmpty()) {
-            System.out.println("Nessun ToDo condiviso con l'utente " + username);
-        } else {
-            System.out.println("ToDo condivisi con " + username + ":");
-            for (ToDo todo : listaToDo) {
-                System.out.println("- " + todo.getTitoloToDo());
-            }
-        }
-    }
-
-    public boolean esitoAccesso(String u, String p){
-        if(username.equals(u) && password.equals(p) ){
+    public boolean esitoAccesso(String u, String p) {
+        if (username.equals(u) && password.equals(p)) {
             System.out.println("Accesso riuscito");
             return true;
         } else {
@@ -51,18 +28,18 @@ public class Utente {
         }
     }
 
-    public void creaToDo(){
+    public void creaToDo() {
         ToDo nuovo = new ToDo();
 
-        System.out.println("Quali attributi vuoi inserire tra :  "+
-                "1.Titolo, 2.Descrizione, 3.Sfondo, 4.Colore sfondo, 5.Data scadenza, 6.Url, 7.Stato\n"+
+        System.out.println("Quali attributi vuoi inserire tra :  " +
+                "1.Titolo, 2.Descrizione, 3.Sfondo, 4.Colore sfondo, 5.Data scadenza, 6.Url, 7.Stato\n" +
                 "Inserisci i numeri di quelli che intendi inserire : ");
 
-        String input=scanner.nextLine();
+        String input = scanner.nextLine();
 
-        String[] scelta=input.split(" ");
+        String[] scelta = input.split(" ");
 
-        for(String s : scelta) {
+        for (String s : scelta) {
             switch (s.trim()) {
                 case "1":
                     System.out.print("Titolo : ");
@@ -91,19 +68,20 @@ public class Utente {
             }
         }
         System.out.println("Seleziona una bacheca in cui inserire il ToDo:");
-        List<Bacheca> listaBacheche=Bacheca.getListaBacheche();
-        for(int i=0;i<listaBacheche.size();i++){
-            System.out.println((i+1)+". "+listaBacheche.get(i).getTitolo());
+        List<Bacheca> listaBacheche = Bacheca.getListaBacheche();
+        for (int i = 0; i < listaBacheche.size(); i++) {
+            System.out.println((i + 1) + ". " + listaBacheche.get(i).getTitolo());
         }
-        int sceltaBacheca=scanner.nextInt();
+        int sceltaBacheca = scanner.nextInt();
         scanner.nextLine();
 
-        if(sceltaBacheca<1 || sceltaBacheca > listaBacheche.size()){
+        if (sceltaBacheca < 1 || sceltaBacheca > listaBacheche.size()) {
             System.out.println("Scelta non valida");
             return;
         }
-        Bacheca bachecaScelta=listaBacheche.get(sceltaBacheca-1);
+        Bacheca bachecaScelta = listaBacheche.get(sceltaBacheca - 1);
         bachecaScelta.getListaToDo().add(nuovo);
+
     }
 
     public void modificaToDo() {
@@ -164,7 +142,6 @@ public class Utente {
     }
 
     public void trasferireAUnToDo() {
-        // Seleziona il ToDo da spostare
         System.out.println("Seleziona il ToDo da spostare:");
         for (int i = 0; i < listaToDo.size(); i++) {
             System.out.println((i + 1) + ". " + listaToDo.get(i).getTitoloToDo());
@@ -185,7 +162,6 @@ public class Utente {
         int sceltaBacheca = scanner.nextInt();
         if (sceltaBacheca < 1 || sceltaBacheca > listaBacheche.size()) return;
 
-        // Rimuovi il ToDo dalla vecchia bacheca e aggiungilo alla nuova
         Bacheca nuovaBacheca = listaBacheche.get(sceltaBacheca - 1);
         todoDaSpostare.getBacheca().getListaToDo().remove(todoDaSpostare);
         nuovaBacheca.getListaToDo().add(todoDaSpostare);
@@ -213,8 +189,7 @@ public class Utente {
         System.out.println("ToDo eliminato con successo!");
     }
 
-    // Ricerca per titolo o nome del ToDo
-    public void ricercaToDo(String query) {
+    public void cercaPerTitoloONome(String query) {
         boolean trovato = false;
         for (ToDo todo : listaToDo) {
             // Verifica se il titolo o la descrizione contiene la query
@@ -224,12 +199,30 @@ public class Utente {
                 trovato = true;
             }
         }
-
         if (!trovato) {
             System.out.println("Nessun ToDo trovato con la ricerca: " + query);
         }
     }
 
+    public final void aggiungiToDoCondiviso(ToDo todo) {
+        if (!listaToDo.contains(todo)) {
+            listaToDo.add(todo);
+        }
+    }
 
+    public void rimuoviToDoCondiviso(ToDo todo) {
+        listaToDo.remove(todo);
+    }
+
+    public void mostraToDoCondivisi() {
+        if (listaToDo.isEmpty()) {
+            System.out.println("Nessun ToDo condiviso con l'utente " + username);
+        } else {
+            System.out.println("ToDo condivisi con " + username + ":");
+            for (ToDo todo : listaToDo) {
+                System.out.println("- " + todo.getTitoloToDo());
+            }
+        }
+    }
 }
 

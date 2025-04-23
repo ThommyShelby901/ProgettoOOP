@@ -3,26 +3,24 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Bacheca {
-    private String titolo;
+    private String titoloBacheca;
     private String descrizione;
     private static final List<Bacheca> listaBacheche=new ArrayList<>();
     private final List<ToDo> listaToDo;
     private static final Scanner scanner=new Scanner(System.in);
 
     public Bacheca(String titolo, String descrizione){
-        this.titolo = titolo;
+        this.titoloBacheca = titoloBacheca;
         this.descrizione = descrizione;
         this.listaToDo=new ArrayList<>();
     }
-
-
 
     public List<ToDo> getListaToDo(){
         return listaToDo;
     }
 
     public String getTitolo() {
-        return titolo;
+        return titoloBacheca;
     }
 
     public static List<Bacheca> getListaBacheche() {
@@ -53,7 +51,7 @@ public class Bacheca {
         System.out.println("Lista delle bacheche:");
         for (int i = 0; i < listaBacheche.size(); i++) {
             Bacheca b = listaBacheche.get(i);
-            System.out.println((i + 1) + ". " + b.titolo + " - " + b.descrizione);
+            System.out.println((i + 1) + ". " + b.titoloBacheca + " - " + b.descrizione);
         }
     }
 
@@ -73,7 +71,7 @@ public class Bacheca {
         System.out.print("Nuovo titolo (invio per lasciare invariato): ");
         String nuovoTitolo = scanner.nextLine();
         if (!nuovoTitolo.isEmpty()) {
-            b.titolo = nuovoTitolo;
+            b.titoloBacheca = nuovoTitolo;
         }
 
         System.out.print("Nuova descrizione (invio per lasciare invariata): ");
