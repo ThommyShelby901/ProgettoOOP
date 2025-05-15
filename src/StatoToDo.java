@@ -1,5 +1,4 @@
 public enum StatoToDo {
     Completato,
-    NonCompletato;
-
+    NonCompletato
 }

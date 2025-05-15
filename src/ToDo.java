@@ -1,7 +1,6 @@
 import java.time.LocalDate;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 public class ToDo {
     private Utente autore;
@@ -12,24 +11,26 @@ public class ToDo {
     private String coloreSfondo;
     private LocalDate dataScadenza;
     private Bacheca bacheca;
-    private StatoToDo stato;
-    private List<Utente> condivisoCon=new ArrayList<>();
-    private static final Scanner scanner=new Scanner(System.in);
+    private StatoToDo statoToDo;
+    private final List<Utente> condivisoCon=new ArrayList<>();
 
     //essendo opzionali andiamo a definirli con set
     public void setAutore(Utente autore){ this.autore=autore; }
     public void setUrl(String url){ this.url=url; }
-    public void setTitolo(String titolo){ this.titoloToDo=titoloToDo; }
+    public void setTitoloToDo(String titoloToDo){ this.titoloToDo=titoloToDo; }
     public void setSfondo(String sfondo){ this.sfondo=sfondo; }
-    public void setDescrizioneToDo(String descrizione){ this.descrizioneToDo=descrizioneToDo; }
+    public void setDescrizioneToDo(String descrizioneToDo){ this.descrizioneToDo=descrizioneToDo; }
     public void setColoreSfondo(String coloreSfondo){ this.coloreSfondo=coloreSfondo; }
     public void setDataScadenza(String dataScadenza){ this.dataScadenza=LocalDate.parse(dataScadenza); }
     public void setBacheca(Bacheca bacheca){ this.bacheca=bacheca; }
-    public void setStato(String stato){ this.stato=StatoToDo.NonCompletato; }
+    public void setStatoToDo(StatoToDo statoToDo){ this.statoToDo=statoToDo; }
 
+    public Utente getAutore(){
+        return autore;
+    }
 
-    public String getDescrizioneToDo(){
-        return descrizioneToDo;
+    public ToDo() {
+        this.statoToDo = StatoToDo.NonCompletato;  // Imposta il valore predefinito
     }
 
     public String getTitoloToDo() {
@@ -40,67 +41,80 @@ public class ToDo {
         return bacheca;
     }
 
-    public void aggiungiCondivisione(Utente utente) {
-        if (this.autore.equals(utente)) {
-            System.out.println("Non puoi aggiungere te stesso alla condivisione.");
+    public void aggiungiCondivisione(Utente richiedente, Utente utenteDaAggiungere) {
+        if (richiedente == null || utenteDaAggiungere == null) {
+            System.out.println("Errore: parametri null non consentiti.");
+            return;
+        }
+        if (!richiedente.equals(autore)) {
+            System.out.println("Errore: solo l'autore può aggiungere condivisioni.");
+            return;
+        }
+        if (autore.equals(utenteDaAggiungere)) {
+            System.out.println("Errore: non puoi condividere con te stesso.");
+            return;
+        }
+        if (condivisoCon.contains(utenteDaAggiungere)) {
+            System.out.println("Errore: utente già presente nelle condivisioni.");
             return;
         }
 
-        if (!condivisoCon.contains(utente)) {
-            condivisoCon.add(utente);
-            utente.aggiungiToDoCondiviso(this);
-
-            // Faccio scegliere all'utente la bacheca in cui inserire il ToDo
-            System.out.println("Seleziona la bacheca in cui " + utente.getUsername() + " vuole inserire il ToDo condiviso:");
-            List<Bacheca> listaBacheche = Bacheca.getListaBacheche();
-            for (int i = 0; i < listaBacheche.size(); i++) {
-                System.out.println((i + 1) + ". " + listaBacheche.get(i).getTitolo());
-            }
-
-            Scanner scanner = new Scanner(System.in);
-            int scelta = scanner.nextInt();
-            scanner.nextLine(); // pulizia buffer
-
-            if (scelta < 1 || scelta > listaBacheche.size()) {
-                System.out.println("Scelta non valida. Il ToDo non è stato aggiunto a nessuna bacheca.");
-                return;
-            }
-
-            Bacheca bachecaSelezionata = listaBacheche.get(scelta - 1);
-            bachecaSelezionata.getListaToDo().add(this);
-            System.out.println("ToDo condiviso e aggiunto alla bacheca: " + bachecaSelezionata.getTitolo());
-        } else {
-            System.out.println(utente.getUsername() + " ha già accesso a questo ToDo.");
+        condivisoCon.add(utenteDaAggiungere);
+        Bacheca bachecaDest = utenteDaAggiungere.getBachecaByTitolo(bacheca.getTitoloBacheca());
+        if (bachecaDest != null) {
+            bachecaDest.aggiungiToDo(this);
+            utenteDaAggiungere.aggiungiToDoCondiviso(this);
         }
+        System.out.println("Condivisione aggiunta con successo.");
     }
 
-    // Rimuovi un utente dalla lista di condivisione (solo se l'utente è già condiviso)
-    public void eliminaCondivisione(Utente utente) {
-        if (!condivisoCon.contains(utente)) {
-            System.out.println(utente.getUsername() + " non ha accesso al ToDo.");
+    public void eliminaCondivisione(Utente richiedente, Utente utenteDaRimuovere) {
+        if (richiedente == null || utenteDaRimuovere == null) {
+            System.out.println("Errore: parametri null non consentiti.");
+            return;
+        }
+        if (!richiedente.equals(autore)) {
+            System.out.println("Errore: solo l'autore può eliminare condivisioni.");
+            return;
+        }
+        if (!condivisoCon.contains(utenteDaRimuovere)) {
+            System.out.println("Errore: utente non presente nelle condivisioni.");
             return;
         }
 
-        condivisoCon.remove(utente);
-        System.out.println(utente.getUsername() + " non ha più accesso a questo ToDo.");
+        condivisoCon.remove(utenteDaRimuovere);
+        Bacheca bachecaDest = utenteDaRimuovere.getBachecaByTitolo(bacheca.getTitoloBacheca());
+        if (bachecaDest != null) {
+            bachecaDest.rimuoviToDo(this);
+            utenteDaRimuovere.rimuoviToDoCondiviso(this);
+        }
+        System.out.println("Condivisione rimossa con successo.");
     }
 
     public boolean verificaScadenzaOggi() {
+        if (dataScadenza == null) return false;
         return dataScadenza.equals(LocalDate.now());
     }
 
     public boolean verificaScadenzaEntro(LocalDate dataLimite) {
+        if (dataScadenza == null || dataLimite == null) return false;
         return !dataScadenza.isAfter(dataLimite);
     }
 
-    public void visualizzascadenza() {
+    public void visualizzaScadenza() {
+        if (dataScadenza == null) {
+            System.out.println(titoloToDo + " (nessuna scadenza)");
+            return;
+        }
         if (verificaScadenzaOggi()) {
-            System.out.println(titoloToDo + " (Scadenza Oggi)");
-        } else if (verificaScadenzaEntro(LocalDate.now())) {
-            System.out.println("\u001B[31m" + titoloToDo + " (SCADUTO)\u001B[0m");  // Rosso se scaduto
+            System.out.println("\u001B[33m" + titoloToDo + " - Scade oggi (" + dataScadenza + ")\u001B[0m");
+        } else if (dataScadenza.isBefore(LocalDate.now())) {
+            System.out.println("\u001B[31m" + titoloToDo + " - SCADUTO (" + dataScadenza + ")\u001B[0m");
         } else {
-            System.out.println(titoloToDo);
+            System.out.println(titoloToDo + " - Scade il " + dataScadenza);
         }
     }
+
+
 }
 
