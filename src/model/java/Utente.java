@@ -1,3 +1,5 @@
+package model.java;
+
 import java.util.List;
 import java.util.ArrayList;
 
@@ -50,13 +52,13 @@ public class Utente {
 
 
         if (!listaToDo.contains(todo)) {
-            System.out.println("Errore: Il ToDo non appartiene a questa bacheca.");
+            System.out.println("Errore: Il model.java.ToDo non appartiene a questa bacheca.");
             return;
         }
 
         // Controllo che l'utente sia l'autore
         if (!todo.getAutore().equals(utenteRichiedente)) {
-            System.out.println("Errore: Solo l'autore può modificare il ToDo.");
+            System.out.println("Errore: Solo l'autore può modificare il model.java.ToDo.");
             return;
         }
         // Modifiche (solo se i parametri non sono null)
@@ -68,7 +70,7 @@ public class Utente {
         if (nuovoUrl != null) todo.setUrl(nuovoUrl);
         if (nuovoStato != null) todo.setStatoToDo(nuovoStato);
 
-        System.out.println("ToDo modificato con successo.");
+        System.out.println("model.java.ToDo modificato con successo.");
     }
 
     public ToDo cercaToDoPerTitolo(String titolo) {
@@ -77,19 +79,19 @@ public class Utente {
                 return todo;
             }
         }
-        System.out.println("Nessun ToDo trovato con il titolo: " + titolo);
+        System.out.println("Nessun model.java.ToDo trovato con il titolo: " + titolo);
         return null;
     }
 
 
     public void eliminaToDo(ToDo todo) {
         if (todo == null) {
-            System.out.println("Errore: ToDo nullo.");
+            System.out.println("Errore: model.java.ToDo nullo.");
             return;
         }
 
         if (!todo.getAutore().equals(this)) {
-            System.out.println("Non sei l'autore di questo ToDo. Non puoi eliminarlo.");
+            System.out.println("Non sei l'autore di questo model.java.ToDo. Non puoi eliminarlo.");
             return;
         }
 
@@ -99,16 +101,16 @@ public class Utente {
         }
 
         if (listaToDo.remove(todo)) {
-            System.out.println("ToDo eliminato correttamente.");
+            System.out.println("model.java.ToDo eliminato correttamente.");
         } else {
-            System.out.println("ToDo non trovato nella tua lista.");
+            System.out.println("model.java.ToDo non trovato nella tua lista.");
         }
     }
 
 
     public void trasferisciToDo(ToDo todo, String nomeBachecaDestinazione) {
         if (todo == null || todo.getAutore() == null || !todo.getAutore().equals(this)) {
-            System.out.println("Non sei l'autore di questo ToDo. Operazione non consentita.");
+            System.out.println("Non sei l'autore di questo model.java.ToDo. Operazione non consentita.");
             return;
         }
 
@@ -121,12 +123,12 @@ public class Utente {
             if (bacheca.getTitoloBacheca().equalsIgnoreCase(nomeBachecaDestinazione)) {
                 bacheca.aggiungiToDo(todo);
                 todo.setBacheca(bacheca);
-                System.out.println("ToDo trasferito nella bacheca: " + nomeBachecaDestinazione);
+                System.out.println("model.java.ToDo trasferito nella bacheca: " + nomeBachecaDestinazione);
                 return;
             }
         }
 
-        System.out.println("Bacheca di destinazione non trovata.");
+        System.out.println("model.java.Bacheca di destinazione non trovata.");
     }
 
     public void aggiungiToDoCondiviso(ToDo todo) {

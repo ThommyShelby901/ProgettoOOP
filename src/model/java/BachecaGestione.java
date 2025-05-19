@@ -1,3 +1,5 @@
+package model.java;
+
 import java.util.List;
 import java.util.ArrayList;
 
@@ -9,6 +11,10 @@ public class BachecaGestione {
         listaBacheche.add(new Bacheca(titolo, descrizione));
     }
 
+    public static List<Bacheca> getListaBacheche() {
+        return listaBacheche;
+    }
+
     public static void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione) {
         for (Bacheca b : listaBacheche) {
             if (b.getTitoloBacheca().equalsIgnoreCase(titoloCorrente)) {
@@ -17,7 +23,7 @@ public class BachecaGestione {
                 return;
             }
         }
-        System.out.println("Bacheca non trovata.");
+        System.out.println("model.java.Bacheca non trovata.");
     }
 
     public static void eliminaBacheca(String titolo) {
@@ -28,9 +34,5 @@ public class BachecaGestione {
         for (Bacheca b : listaBacheche) {
             System.out.println("- " + b.getTitoloBacheca() + ": " + b.getDescrizioneBacheca());
         }
-    }
-
-    public static List<Bacheca> getListaBacheche() {
-        return listaBacheche;
     }
 }

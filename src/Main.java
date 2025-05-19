@@ -1,3 +1,5 @@
+import model.java.*;
+
 public class Main {
     public static void main(String[] args) {
         // Creazione bacheche iniziali (comuni a tutti)
@@ -23,14 +25,14 @@ public class Main {
                 "2025-05-16", null, StatoToDo.NonCompletato, lavoro);
 
         for (Bacheca b : BachecaGestione.getListaBacheche()) {
-            System.out.println("\nBacheca: " + b.getTitoloBacheca());
+            System.out.println("\nmodel.java.Bacheca: " + b.getTitoloBacheca());
             b.mostraToDo();
         }
 
         ToDo taskUniversita = lorenzo.cercaToDoPerTitolo("Studiare Java");
         taskUniversita.aggiungiCondivisione(lorenzo, alessandro);
 
-        System.out.println("\nToDo condivisi con Alessandro nella bacheca Università:");
+        System.out.println("\nmodel.java.ToDo condivisi con Alessandro nella bacheca Università:");
         Bacheca universitaLucia = alessandro.getBachecaByTitolo("Università");
         if (universitaLucia != null) {
             universitaLucia.mostraToDo();
@@ -46,7 +48,7 @@ public class Main {
 
         System.out.println("\nBacheche dopo eliminazione/modifica:");
         for (Bacheca b : BachecaGestione.getListaBacheche()) {
-            System.out.println("\nBacheca: " + b.getTitoloBacheca());
+            System.out.println("\nmodel.java.Bacheca: " + b.getTitoloBacheca());
             b.mostraToDo();
         }
 
