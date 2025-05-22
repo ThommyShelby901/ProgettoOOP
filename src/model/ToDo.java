@@ -31,8 +31,12 @@ public class ToDo {
         return autore;
     }
 
+    public String getDescrizioneToDo(){
+        return descrizioneToDo;
+    }
+
     public ToDo() {
-        this.statoToDo = StatoToDo.NonCompletato;  // Imposta il valore predefinito
+        this.statoToDo = StatoToDo.NONCOMPLETATO;  // Imposta il valore predefinito
     }
 
     public String getTitoloToDo() {

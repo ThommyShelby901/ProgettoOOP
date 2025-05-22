@@ -1,6 +1,6 @@
 package model;
 
 public enum StatoToDo {
-    Completato,
-    NonCompletato
+    COMPLETATO,
+    NONCOMPLETATO
 }

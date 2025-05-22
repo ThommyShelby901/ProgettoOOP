@@ -26,7 +26,6 @@ public class Utente {
 
     public void creaToDo(String titolo, String descrizione, String sfondo, String coloreSfondo,
                          String dataScadenza, String url, StatoToDo stato, Bacheca bacheca) {
-
         ToDo nuovo = new ToDo();
         nuovo.setAutore(this); // imposta l'autore come l'utente corrente
 
@@ -50,7 +49,6 @@ public class Utente {
                              String nuovaDataScadenza, String nuovoUrl,
                              StatoToDo nuovoStato) {
 
-
         if (!listaToDo.contains(todo)) {
             System.out.println("Errore: Il ToDo non appartiene a questa bacheca.");
             return;
@@ -58,7 +56,7 @@ public class Utente {
 
         // Controllo che l'utente sia l'autore
         if (!todo.getAutore().equals(utenteRichiedente)) {
-            System.out.println("Errore: Solo l'autore può modificare il ToDo.");
+            System.out.println("Errore: solo l'autore può modificare il ToDo.");
             return;
         }
         // Modifiche (solo se i parametri non sono null)
@@ -119,7 +117,7 @@ public class Utente {
             bachecaOrigine.rimuoviToDo(todo);
         }
 
-        for (Bacheca bacheca : BachecaGestione.getListaBacheche()) {
+        for (Bacheca bacheca : Bacheca.getListaBacheche()) {
             if (bacheca.getTitoloBacheca().equalsIgnoreCase(nomeBachecaDestinazione)) {
                 bacheca.aggiungiToDo(todo);
                 todo.setBacheca(bacheca);
@@ -143,12 +141,16 @@ public class Utente {
     }
 
     public Bacheca getBachecaByTitolo(String titolo) {
-        for (Bacheca bacheca : BachecaGestione.getListaBacheche()) { // lista statica di tutte le bacheche
+        for (Bacheca bacheca : Bacheca.getListaBacheche()) { // lista statica di tutte le bacheche
             if (bacheca.getTitoloBacheca().equalsIgnoreCase(titolo)) {
                 return bacheca;
             }
         }
         return null;
+    }
+
+    public List<ToDo> getListaToDo() {
+        return listaToDo;
     }
 }
 
