@@ -7,22 +7,47 @@ public class Utente {
     private final String username;
     private final String password;
     private final List<ToDo> listaToDo;
+    private List<Bacheca> listaBacheche;
 
     public Utente(String username, String password) {
         this.username = username;
         this.password = password;
         this.listaToDo = new ArrayList<>();
+        this.listaBacheche = new ArrayList<>();
     }
 
-    public boolean esitoAccesso(String u, String p) {
-        if (username.equals(u) && password.equals(p)) {
-            System.out.println("Accesso riuscito");
-            return true;
-        } else {
-            System.out.println("Accesso negato");
-            return false;
-        }
+    public List<Bacheca> getListaBacheche() {
+        return listaBacheche;
     }
+
+    public Bacheca creaBacheca(String titolo, String descrizione) {
+        Bacheca nuova = new Bacheca(titolo, descrizione);
+        listaBacheche.add(nuova);
+        return nuova;
+    }
+
+
+    public void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione) {
+        for (Bacheca b : listaBacheche) {
+            if (b.getTitoloBacheca().equalsIgnoreCase(titoloCorrente)) {
+                b.setTitoloBacheca(nuovoTitolo);
+                b.setDescrizioneBacheca(nuovaDescrizione);
+                return;
+            }
+        }
+        System.out.println("Bacheca non trovata.");
+    }
+
+    public void eliminaBacheca(String titolo) {
+        listaBacheche.removeIf(b -> b.getTitoloBacheca().equalsIgnoreCase(titolo));
+    }
+
+    public boolean esitoAccesso() {
+        return (username.equals("user1") && password.equals("password1")) ||
+                (username.equals("giulia") && password.equals("ciao")) ||
+                (username.equals("marco") && password.equals("pwd"));
+    }
+
 
     public void creaToDo(String titolo, String descrizione, String sfondo, String coloreSfondo,
                          String dataScadenza, String url, StatoToDo stato, Bacheca bacheca) {
@@ -71,23 +96,22 @@ public class Utente {
         System.out.println("ToDo modificato con successo.");
     }
 
-    public ToDo cercaToDoPerTitolo(String titolo) {
-        for (ToDo todo : listaToDo) {
-            if (todo.getTitoloToDo().equalsIgnoreCase(titolo)) {
-                return todo;
+    public ToDo cercaToDoPerTitoloEBoard(String titolo, Bacheca board) {
+        for (ToDo t : listaToDo) {
+            if (t.getBacheca() != null &&
+                    t.getBacheca().equals(board) &&
+                    t.getTitoloToDo().equalsIgnoreCase(titolo)) {
+                return t;
             }
         }
-        System.out.println("Nessun ToDo trovato con il titolo: " + titolo);
-        return null;
+        return null; // Non trovato
     }
-
 
     public void eliminaToDo(ToDo todo) {
         if (todo == null) {
-            System.out.println("Errore:ToDo nullo.");
+            System.out.println("Errore: ToDo nullo.");
             return;
         }
-
         if (!todo.getAutore().equals(this)) {
             System.out.println("Non sei l'autore di questo ToDo. Non puoi eliminarlo.");
             return;
@@ -97,7 +121,6 @@ public class Utente {
         if (bacheca != null) {
             bacheca.rimuoviToDo(todo);
         }
-
         if (listaToDo.remove(todo)) {
             System.out.println("ToDo eliminato correttamente.");
         } else {
@@ -105,29 +128,21 @@ public class Utente {
         }
     }
 
-
     public void trasferisciToDo(ToDo todo, String nomeBachecaDestinazione) {
-        if (todo == null || todo.getAutore() == null || !todo.getAutore().equals(this)) {
-            System.out.println("Non sei l'autore di questo ToDo. Operazione non consentita.");
-            return;
-        }
+        if (todo == null || !todo.getAutore().equals(this)) return;
 
-        Bacheca bachecaOrigine = todo.getBacheca();
-        if (bachecaOrigine != null) {
-            bachecaOrigine.rimuoviToDo(todo);
-        }
+        if (todo.getBacheca() != null) todo.getBacheca().rimuoviToDo(todo);
 
-        for (Bacheca bacheca : Bacheca.getListaBacheche()) {
-            if (bacheca.getTitoloBacheca().equalsIgnoreCase(nomeBachecaDestinazione)) {
-                bacheca.aggiungiToDo(todo);
-                todo.setBacheca(bacheca);
-                System.out.println("ToDo trasferito nella bacheca: " + nomeBachecaDestinazione);
+        for (Bacheca b : getListaBacheche()) {
+            if (b.getTitoloBacheca().equalsIgnoreCase(nomeBachecaDestinazione)) {
+                b.aggiungiToDo(todo);
+                todo.setBacheca(b);
                 return;
             }
         }
-
-        System.out.println("Bacheca di destinazione non trovata.");
+        System.out.println("Bacheca destinazione non trovata.");
     }
+
 
     public void aggiungiToDoCondiviso(ToDo todo) {
         if (!listaToDo.contains(todo)) {
@@ -141,7 +156,7 @@ public class Utente {
     }
 
     public Bacheca getBachecaByTitolo(String titolo) {
-        for (Bacheca bacheca : Bacheca.getListaBacheche()) { // lista statica di tutte le bacheche
+        for (Bacheca bacheca : getListaBacheche()) { // lista statica di tutte le bacheche
             if (bacheca.getTitoloBacheca().equalsIgnoreCase(titolo)) {
                 return bacheca;
             }

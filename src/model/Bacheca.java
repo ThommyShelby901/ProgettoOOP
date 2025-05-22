@@ -1,21 +1,19 @@
 package model;
 
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 public class Bacheca {
     private String titoloBacheca;
     private String descrizioneBacheca;
     private final List<ToDo> listaToDo;
 
-    // Costruttore
     public Bacheca(String titoloBacheca, String descrizioneBacheca) {
         this.titoloBacheca = titoloBacheca;
         this.descrizioneBacheca = descrizioneBacheca;
         this.listaToDo = new ArrayList<>();
     }
 
-    // Getter e Setter
     public String getTitoloBacheca() {
         return titoloBacheca;
     }
@@ -32,11 +30,6 @@ public class Bacheca {
         this.descrizioneBacheca = descrizioneBacheca;
     }
 
-    public List<ToDo> getListaToDo() {
-        return listaToDo;
-    }
-
-    // Metodi di gestione ToDo
     public void aggiungiToDo(ToDo todo) {
         listaToDo.add(todo);
     }
@@ -51,35 +44,29 @@ public class Bacheca {
         }
     }
 
-    // Metodi statici opzionali, se vuoi gestire le bacheche globalmente
-    private static final List<Bacheca> listaBacheche = new ArrayList<>();
-
-    public static void creaBacheca(String titolo, String descrizione) {
-        listaBacheche.add(new Bacheca(titolo, descrizione));
+    public void spostaToDo(int from, int to) {
+        if (from < 0 || from >= listaToDo.size() || to < 0 || to >= listaToDo.size()) return;
+        ToDo t = listaToDo.remove(from);
+        listaToDo.add(to, t);
     }
 
-    public static void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione) {
-        for (Bacheca b : listaBacheche) {
-            if (b.getTitoloBacheca().equalsIgnoreCase(titoloCorrente)) {
-                b.setTitoloBacheca(nuovoTitolo);
-                b.setDescrizioneBacheca(nuovaDescrizione);
-                return;
-            }
-        }
-        System.out.println("Bacheca non trovata.");
+    public List<ToDo> getListaToDo() {
+        return listaToDo;
     }
 
-    public static void eliminaBacheca(String titolo) {
-        listaBacheche.removeIf(b -> b.getTitoloBacheca().equalsIgnoreCase(titolo));
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;               // se sono lo stesso oggetto, ok
+        if (o == null || getClass() != o.getClass()) return false; // controlla classe
+        Bacheca bacheca = (Bacheca) o;
+        return titoloBacheca != null && titoloBacheca.equalsIgnoreCase(bacheca.titoloBacheca);
     }
 
-    public static void visualizzaBacheche() {
-        for (Bacheca b : listaBacheche) {
-            System.out.println("- " + b.getTitoloBacheca() + ": " + b.getDescrizioneBacheca());
-        }
+    @Override
+    public int hashCode() {
+        return titoloBacheca == null ? 0 : titoloBacheca.toLowerCase().hashCode();
     }
 
-    public static List<Bacheca> getListaBacheche() {
-        return listaBacheche;
-    }
+
+
 }
