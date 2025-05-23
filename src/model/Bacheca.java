@@ -44,10 +44,9 @@ public class Bacheca {
         }
     }
 
-    public void spostaToDo(int from, int to) {
-        if (from < 0 || from >= listaToDo.size() || to < 0 || to >= listaToDo.size()) return;
-        ToDo t = listaToDo.remove(from);
-        listaToDo.add(to, t);
+    public void spostaToDo(String titoloDaSpostare, String titoloPosizione) {
+        // Questo metodo sarà richiamato dal controller,
+        // ma non contiene la logica operativa.
     }
 
     public List<ToDo> getListaToDo() {
@@ -66,6 +65,16 @@ public class Bacheca {
     public int hashCode() {
         return titoloBacheca == null ? 0 : titoloBacheca.toLowerCase().hashCode();
     }
+
+    public ToDo getToDoByTitolo(String titolo) {
+        for (ToDo t : listaToDo) {
+            if (t.getTitoloToDo().equalsIgnoreCase(titolo)) {
+                return t;
+            }
+        }
+        return null; // non trovato
+    }
+
 
 
 

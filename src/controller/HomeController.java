@@ -1,7 +1,8 @@
 package controller;
 
+import gui.BachecaGUI;
 import gui.HomeFrame;
-import gui.ToDoFrame;
+
 import model.Bacheca;
 import model.ToDo;
 import model.Utente;
@@ -15,9 +16,11 @@ public class HomeController {
     private Utente utente;
 
 
+
     public HomeController(HomeFrame homeFrame, Utente utente) {
         this.homeFrame = homeFrame;
         this.utente = utente;
+
 
         // Imposta i listener sui pulsanti della HomeFrame
         homeFrame.getBtnCreaBacheca().addActionListener(e -> creaBacheca());
@@ -25,8 +28,6 @@ public class HomeController {
         homeFrame.getBtnEliminaBacheca().addActionListener(e -> eliminaBacheca());
         homeFrame.getBtnLogout().addActionListener(e -> logout());
         homeFrame.getBtnVisualizzaBacheca().addActionListener(e -> visualizzaBacheca());
-
-
 
         // Carica e visualizza le bacheche predefinite
         refreshBoardList();
@@ -115,17 +116,14 @@ public class HomeController {
 
 
     private void visualizzaBacheca() {
-        // Recupera l'indice selezionato dalla JList delle bacheche
         int index = homeFrame.getBoardList().getSelectedIndex();
         if (index == -1) {
             JOptionPane.showMessageDialog(homeFrame.getFrame(), "Seleziona una bacheca da visualizzare!");
             return;
         }
 
-        // Recupera il titolo della bacheca selezionata dalla lista GUI
         String boardTitle = homeFrame.getBoardListModel().getElementAt(index);
 
-        // Cerca la bacheca corrispondente nel modello (utente)
         Bacheca board = utente.getListaBacheche().stream()
                 .filter(b -> b.getTitoloBacheca().equalsIgnoreCase(boardTitle))
                 .findFirst()
@@ -138,14 +136,13 @@ public class HomeController {
 
         board.mostraToDo();
 
-        ToDoFrame toDoFrame = new ToDoFrame(board.getTitoloBacheca());
-        new ToDoController(toDoFrame, board, utente);
-        toDoFrame.showFrame();
+        BachecaGUI bachecaGUI = new BachecaGUI(board.getTitoloBacheca());
+        ToDoController toDoController = new ToDoController(utente, board, bachecaGUI);
+
+        bachecaGUI.show();
     }
 
-
-
-
+    // TODO: Implementa questo metodo in base alla tua gestione utenti (ad esempio cerca in una lista utenti globali)
 
 
 }

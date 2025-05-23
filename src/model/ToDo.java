@@ -3,6 +3,7 @@ package model;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class ToDo {
     private Utente autore;
@@ -26,6 +27,10 @@ public class ToDo {
     public void setDataScadenza(String dataScadenza){ this.dataScadenza=LocalDate.parse(dataScadenza); }
     public void setBacheca(Bacheca bacheca){ this.bacheca=bacheca; }
     public void setStatoToDo(StatoToDo statoToDo){ this.statoToDo=statoToDo; }
+
+    public List<Utente> getCondivisoCon() {
+        return condivisoCon;
+    }
 
     public Utente getAutore(){
         return autore;
@@ -120,6 +125,39 @@ public class ToDo {
             System.out.println(titoloToDo + " - Scade il " + dataScadenza);
         }
     }
+
+    public LocalDate getDataScadenza() {
+        return dataScadenza;
+    }
+
+
+    public String getColoreSfondo() {
+        return coloreSfondo;
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof ToDo)) return false;
+        ToDo other = (ToDo) o;
+        return this.titoloToDo != null && other.titoloToDo != null
+                && this.titoloToDo.equalsIgnoreCase(other.titoloToDo)
+                && this.autore != null && other.autore != null
+                && this.autore.equals(other.autore)
+                && this.bacheca != null && other.bacheca != null
+                && this.bacheca.equals(other.bacheca);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(
+                titoloToDo != null ? titoloToDo.toLowerCase() : "",
+                autore,
+                bacheca
+        );
+    }
+
 
 
 }

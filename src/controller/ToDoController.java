@@ -1,236 +1,330 @@
 package controller;
 
-import gui.ToDoFrame;
+import gui.BachecaGUI;
 import model.Bacheca;
 import model.StatoToDo;
 import model.ToDo;
 import model.Utente;
 
 import javax.swing.*;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ToDoController {
-    private ToDoFrame toDoFrame;
-    private Bacheca board;    // La bacheca corrente
-    private Utente utente;    // L'utente loggato, che gestisce la lista globale dei ToDo
+    private BachecaGUI bachecaGUI;
+    private Bacheca board;
+    private Utente utente;
+    private List<Utente> listaUtentiGlobali;
 
-    public ToDoController(ToDoFrame toDoFrame, Bacheca board, Utente utente) {
-        this.toDoFrame = toDoFrame;
-        this.board = board;
+    public ToDoController(Utente utente, Bacheca board, BachecaGUI bachecaGUI ) {
         this.utente = utente;
+        this.board = board;
+        this.bachecaGUI = bachecaGUI;
+        this.listaUtentiGlobali = Utente.getListaUtentiGlobali();
+
         initController();
         refreshToDoList();
     }
 
-    // Associa un ActionListener a ciascun pulsante della ToDoFrame
     private void initController() {
-        toDoFrame.getBtnCrea().addActionListener(e -> creaToDo());
-        toDoFrame.getBtnModifica().addActionListener(e -> modificaToDo());
-        toDoFrame.getBtnElimina().addActionListener(e -> eliminaToDo());
-        toDoFrame.getBtnTrasferisci().addActionListener(e -> trasferisciToDo());
-        toDoFrame.getBtnSposta().addActionListener(e -> spostaToDo());
-        toDoFrame.getBtnCerca().addActionListener(e -> cercaToDo());
-        toDoFrame.getBtnBack().addActionListener(e -> toDoFrame.dispose());
+        bachecaGUI.getBtnCrea().addActionListener(e -> creaToDo());
+        bachecaGUI.getBtnModifica().addActionListener(e -> modificaToDo());
+        bachecaGUI.getBtnElimina().addActionListener(e -> eliminaToDo());
+        bachecaGUI.getBtnSposta().addActionListener(e -> azioneSpostaToDo());
+        bachecaGUI.getBtnTrasferisci().addActionListener(e -> trasferisciToDo());
+        bachecaGUI.getBtnCerca().addActionListener(e -> cercaToDo());
+        bachecaGUI.getTodoList().addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                int selectedIndex = bachecaGUI.getTodoList().getSelectedIndex();
+                if (selectedIndex != -1) {
+                    String titoloToDo = bachecaGUI.getTodoListModel().getElementAt(selectedIndex);
+                    if (!"Nessun ToDo presente.".equals(titoloToDo)) {
+                        ToDo todoSelezionato = board.getToDoByTitolo(titoloToDo);
+                        aggiornaListaCondivisioni(todoSelezionato);
+                    } else {
+                        bachecaGUI.getCondivisoListModel().clear();
+                    }
+                } else {
+                    bachecaGUI.getCondivisoListModel().clear();
+                }
+            }
+        });
+
+        // Listener per bottone aggiungi condivisione
+        bachecaGUI.getBtnAggiungiCondivisione().addActionListener(e -> aggiungiCondivisione());
+
+        // Listener per bottone rimuovi condivisione
+        bachecaGUI.getBtnRimuoviCondivisione().addActionListener(e -> rimuoviCondivisione());
     }
 
-    // Aggiorna la JList filtrando i ToDo dell'utente per quelli appartenenti alla bacheca corrente
-    private void refreshToDoList() {
-        DefaultListModel<String> model = toDoFrame.getTodoListModel();
+    private void aggiornaListaCondivisioni(ToDo todo) {
+        DefaultListModel<String> model = bachecaGUI.getCondivisoListModel();
         model.clear();
-        List<ToDo> allTodos = utente.getListaToDo(); // Ora getListaToDo() è definito nella classe Utente
-        List<ToDo> boardTodos = new ArrayList<>();
-        for (ToDo t : allTodos) {
-            if (t.getBacheca() != null &&
-                    t.getBacheca().getTitoloBacheca().equalsIgnoreCase(board.getTitoloBacheca())) {
-                boardTodos.add(t);
+        if (todo != null) {
+            for (Utente u : todo.getCondivisoCon()) {
+                model.addElement(u.getNome()); // o getUsername(), come preferisci
             }
         }
-        if (boardTodos.isEmpty()) {
-            model.addElement("Nessun ToDo presente.");
+    }
+
+    private void aggiungiCondivisione() {
+        int selectedIndex = bachecaGUI.getTodoList().getSelectedIndex();
+        if (selectedIndex == -1) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Seleziona un ToDo prima!");
             return;
         }
-        for (ToDo t : boardTodos) {
-            model.addElement(t.getTitoloToDo());
+
+        String titoloToDo = bachecaGUI.getTodoListModel().getElementAt(selectedIndex);
+        if ("Nessun ToDo presente.".equals(titoloToDo)) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Nessun ToDo selezionato valido!");
+            return;
+        }
+
+        ToDo todoSelezionato = board.getToDoByTitolo(titoloToDo);
+
+        String nomeUtente = JOptionPane.showInputDialog(bachecaGUI.getFrame(), "Inserisci nome utente da condividere:");
+        if (nomeUtente == null || nomeUtente.trim().isEmpty()) return;
+
+        Utente utenteDaAggiungere = getUtenteByNome(nomeUtente.trim());
+        if (utenteDaAggiungere == null) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Utente non trovato!");
+            return;
+        }
+
+        todoSelezionato.aggiungiCondivisione(utente, utenteDaAggiungere);
+        aggiornaListaCondivisioni(todoSelezionato);
+    }
+
+    private void rimuoviCondivisione() {
+        int selectedToDoIndex = bachecaGUI.getTodoList().getSelectedIndex();
+        int selectedUserIndex = bachecaGUI.getCondivisoList().getSelectedIndex();
+
+        if (selectedToDoIndex == -1 || selectedUserIndex == -1) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Seleziona un ToDo e un utente da rimuovere!");
+            return;
+        }
+
+        String titoloToDo = bachecaGUI.getTodoListModel().getElementAt(selectedToDoIndex);
+        if ("Nessun ToDo presente.".equals(titoloToDo)) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Nessun ToDo selezionato valido!");
+            return;
+        }
+
+        ToDo todoSelezionato = board.getToDoByTitolo(titoloToDo);
+
+        String nomeUtente = bachecaGUI.getCondivisoListModel().getElementAt(selectedUserIndex);
+        Utente utenteDaRimuovere = getUtenteByNome(nomeUtente);
+        if (utenteDaRimuovere == null) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Utente non trovato!");
+            return;
+        }
+
+        todoSelezionato.eliminaCondivisione(utente, utenteDaRimuovere);
+        aggiornaListaCondivisioni(todoSelezionato);
+    }
+
+    public Utente getUtenteByNome(String nome) {
+        return listaUtentiGlobali.stream()
+                .filter(u -> u.getNome().equalsIgnoreCase(nome))
+                .findFirst()
+                .orElse(null);
+    }
+
+
+
+    public void refreshToDoList() {
+        DefaultListModel<String> model = bachecaGUI.getTodoListModel();
+        model.clear();
+
+        List<ToDo> allToDo = utente.getListaToDo();
+        boolean hasToDo = false;
+
+        for (ToDo t : allToDo) {
+            if (t.getBacheca() != null &&
+                    t.getBacheca().getTitoloBacheca().equalsIgnoreCase(board.getTitoloBacheca())) {
+                model.addElement(t.getTitoloToDo());
+                hasToDo = true;
+            }
+        }
+
+        if (!hasToDo) {
+            model.addElement("Nessun ToDo presente.");
         }
     }
 
-    // Crea un nuovo ToDo e lo aggiunge alla lista globale tramite il metodo dell'utente
     private void creaToDo() {
-        String titolo = JOptionPane.showInputDialog(toDoFrame.getFrame(), "Inserisci il titolo del ToDo:");
+        String titolo = JOptionPane.showInputDialog(bachecaGUI.getFrame(), "Inserisci il titolo del ToDo:");
         if (titolo == null || titolo.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "Titolo non valido!");
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Titolo non valido!");
             return;
         }
-        String descrizione = JOptionPane.showInputDialog(toDoFrame.getFrame(), "Inserisci la descrizione:");
-        if (descrizione == null) {
-            descrizione = "";
-        }
 
-        // Altri campi opzionali (puoi aggiungere dialog se vuoi)
-        String sfondo = null; // esempio placeholder
+        String descrizione = JOptionPane.showInputDialog(bachecaGUI.getFrame(), "Inserisci la descrizione:");
+        if (descrizione == null) descrizione = "";
+
+        // Puoi aggiungere altri campi o usare default
+        String sfondo = null;
         String coloreSfondo = null;
         String dataScadenza = null;
         String url = null;
-        StatoToDo stato = StatoToDo.COMPLETATO; // o uno stato di default
+        StatoToDo stato = StatoToDo.NONCOMPLETATO;
 
         utente.creaToDo(titolo, descrizione, sfondo, coloreSfondo, dataScadenza, url, stato, board);
-
         refreshToDoList();
     }
 
-    // Modifica un ToDo selezionato delegando al metodo già esistente in Utente
     private void modificaToDo() {
-        int index = toDoFrame.getTodoList().getSelectedIndex();
-        if (index == -1) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "Seleziona un ToDo da modificare!");
+        int idx = bachecaGUI.getTodoList().getSelectedIndex();
+        if (idx == -1) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Seleziona un ToDo da modificare!");
             return;
         }
-        String currentTitle = toDoFrame.getTodoListModel().getElementAt(index);
-        if (currentTitle.equals("Nessun ToDo presente.")) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "Nessun ToDo da modificare!");
+
+        String titolo = bachecaGUI.getTodoListModel().getElementAt(idx);
+        if ("Nessun ToDo presente.".equals(titolo)) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Nessun ToDo da modificare!");
             return;
         }
-        // Utilizza il metodo di ricerca del modello
-        ToDo selectedToDo = utente.cercaToDoPerTitoloEBoard(currentTitle, board);
-        if (selectedToDo == null) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "ToDo non trovato!");
+
+        ToDo toModify = utente.cercaToDoPerTitoloEBoard(titolo, board);
+        if (toModify == null) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "ToDo non trovato!");
             return;
         }
-        String newTitle = JOptionPane.showInputDialog(toDoFrame.getFrame(), "Inserisci il nuovo titolo:", selectedToDo.getTitoloToDo());
-        if (newTitle == null || newTitle.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "Titolo non valido!");
-            return;
-        }
-        String newDesc = JOptionPane.showInputDialog(toDoFrame.getFrame(), "Inserisci la nuova descrizione:", selectedToDo.getDescrizioneToDo());
-        if (newDesc == null) {
-            newDesc = "";
-        }
-        // La modifica viene delegata al metodo dell'utente
-        utente.modificaToDo(selectedToDo, utente, newTitle, newDesc, null, null, null, null, null);
-        JOptionPane.showMessageDialog(toDoFrame.getFrame(), "ToDo modificato con successo.");
-        refreshToDoList();
+
+        new ToDoDetailController(toModify, this::refreshToDoList);
     }
-
-
 
     private void eliminaToDo() {
-        int index = toDoFrame.getTodoList().getSelectedIndex();
-        if (index == -1) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "Seleziona un ToDo da eliminare!");
+        int idx = bachecaGUI.getTodoList().getSelectedIndex();
+        if (idx == -1) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Seleziona un ToDo da eliminare!");
             return;
         }
 
-        String title = toDoFrame.getTodoListModel().getElementAt(index);
-        if ("Nessun ToDo presente.".equals(title)) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "Nessun ToDo da eliminare!");
+        String titolo = bachecaGUI.getTodoListModel().getElementAt(idx);
+        if ("Nessun ToDo presente.".equals(titolo)) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Nessun ToDo da eliminare!");
             return;
         }
 
         int conferma = JOptionPane.showConfirmDialog(
-                toDoFrame.getFrame(),
+                bachecaGUI.getFrame(),
                 "Sei sicuro di voler eliminare questo ToDo?",
                 "Elimina ToDo",
-                JOptionPane.YES_NO_OPTION
-        );
+                JOptionPane.YES_NO_OPTION);
 
-        if (conferma != JOptionPane.YES_OPTION) {
+        if (conferma != JOptionPane.YES_OPTION) return;
+
+        ToDo toDelete = utente.cercaToDoPerTitoloEBoard(titolo, board);
+        if (toDelete == null) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "ToDo non trovato.");
             return;
         }
 
-        ToDo selectedToDo = utente.cercaToDoPerTitoloEBoard(title, board);
-
-        if (selectedToDo == null) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "ToDo non trovato.");
-            return;
-        }
-
-        utente.eliminaToDo(selectedToDo);
-        JOptionPane.showMessageDialog(toDoFrame.getFrame(), "ToDo eliminato correttamente.");
+        utente.eliminaToDo(toDelete);
+        JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "ToDo eliminato.");
         refreshToDoList();
     }
 
-
-
-    private void spostaToDo() {
-        int i = toDoFrame.getTodoList().getSelectedIndex();
-        if (i == -1) return;
-
-        String title = toDoFrame.getTodoListModel().getElementAt(i);
-        if ("Nessun ToDo presente.".equals(title)) return;
-
-        ToDo t = utente.cercaToDoPerTitoloEBoard(title, board);
-        if (t == null) return;
-
-        String posStr = JOptionPane.showInputDialog(toDoFrame.getFrame(), "Nuova posizione:");
-        if (posStr == null) return;
-
-        try {
-            int newPos = Integer.parseInt(posStr);
-            int oldPos = board.getListaToDo().indexOf(t);
-            if (oldPos == -1) return;
-
-            board.spostaToDo(oldPos, newPos);
-            refreshToDoList();
-            toDoFrame.getTodoList().setSelectedIndex(newPos);
-        } catch (NumberFormatException e) { }
-    }
-
-
-
-    // Cerca un ToDo per titolo all'interno della bacheca corrente e lo seleziona se trovato
-    private void cercaToDo() {
-        String query = JOptionPane.showInputDialog(toDoFrame.getFrame(), "Inserisci il titolo del ToDo da cercare:");
-        if (query == null || query.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "Inserisci un criterio valido!");
+    private void azioneSpostaToDo() {
+        String daSpostare = JOptionPane.showInputDialog(bachecaGUI.getFrame(), "Titolo del ToDo da spostare:");
+        if (daSpostare == null || daSpostare.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Titolo non valido.");
             return;
         }
-        List<ToDo> boardTodos = new ArrayList<>();
-        for (ToDo t : utente.getListaToDo()) {
-            if (t.getBacheca() != null &&
-                    t.getBacheca().getTitoloBacheca().equalsIgnoreCase(board.getTitoloBacheca())) {
-                boardTodos.add(t);
+
+        String davantiA = JOptionPane.showInputDialog(bachecaGUI.getFrame(),
+                "Titolo del ToDo davanti al quale vuoi spostarlo (vuoto per prima posizione):");
+
+        spostaToDo(daSpostare.trim(), davantiA != null ? davantiA.trim() : "");
+    }
+
+    public void spostaToDo(String titoloDaSpostare, String titoloPosizione) {
+        List<ToDo> lista = board.getListaToDo();
+        ToDo daSpostare = null;
+
+        for (ToDo t : lista) {
+            if (t.getTitoloToDo().equalsIgnoreCase(titoloDaSpostare)) {
+                daSpostare = t;
+                break;
             }
         }
+
+        if (daSpostare == null) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "ToDo da spostare non trovato.");
+            return;
+        }
+
+        lista.remove(daSpostare);
+
+        if (titoloPosizione == null || titoloPosizione.isEmpty()) {
+            lista.add(0, daSpostare);
+        } else {
+            int pos = 0;
+            for (int i = 0; i < lista.size(); i++) {
+                if (lista.get(i).getTitoloToDo().equalsIgnoreCase(titoloPosizione)) {
+                    pos = i;
+                    break;
+                }
+            }
+            lista.add(pos, daSpostare);
+        }
+
+        refreshToDoList();
+    }
+
+    private void cercaToDo() {
+        String query = JOptionPane.showInputDialog(bachecaGUI.getFrame(), "Inserisci il titolo del ToDo da cercare:");
+        if (query == null || query.trim().isEmpty()) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Inserisci un criterio valido!");
+            return;
+        }
+
+        List<ToDo> boardTodos = board.getListaToDo();
         int foundIndex = -1;
+
         for (int i = 0; i < boardTodos.size(); i++) {
             if (boardTodos.get(i).getTitoloToDo().equalsIgnoreCase(query.trim())) {
                 foundIndex = i;
                 break;
             }
         }
+
         if (foundIndex != -1) {
-            toDoFrame.getTodoList().setSelectedIndex(foundIndex);
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "ToDo trovato e selezionato.");
+            bachecaGUI.getTodoList().setSelectedIndex(foundIndex);
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "ToDo trovato e selezionato.");
         } else {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "ToDo non trovato.");
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "ToDo non trovato.");
         }
     }
 
     private void trasferisciToDo() {
-        int idx = toDoFrame.getTodoList().getSelectedIndex();
+        int idx = bachecaGUI.getTodoList().getSelectedIndex();
         if (idx == -1) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "Seleziona un ToDo!");
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Seleziona un ToDo!");
             return;
         }
-        String title = toDoFrame.getTodoListModel().getElementAt(idx);
-        if ("Nessun ToDo presente.".equals(title)) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "Nessun ToDo!");
+
+        String titolo = bachecaGUI.getTodoListModel().getElementAt(idx);
+        if ("Nessun ToDo presente.".equals(titolo)) {
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Nessun ToDo!");
             return;
         }
-        ToDo t = utente.cercaToDoPerTitoloEBoard(title, board);
+
+        ToDo t = utente.cercaToDoPerTitoloEBoard(titolo, board);
         if (t == null) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "ToDo non trovato!");
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "ToDo non trovato!");
             return;
         }
-        String dest = JOptionPane.showInputDialog(toDoFrame.getFrame(), "Nome bacheca destinazione:");
+
+        String dest = JOptionPane.showInputDialog(bachecaGUI.getFrame(), "Nome bacheca destinazione:");
         if (dest == null || dest.trim().isEmpty()) {
-            JOptionPane.showMessageDialog(toDoFrame.getFrame(), "Nome non valido!");
+            JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "Nome non valido!");
             return;
         }
+
         utente.trasferisciToDo(t, dest.trim());
-        JOptionPane.showMessageDialog(toDoFrame.getFrame(), "ToDo trasferito.");
+        JOptionPane.showMessageDialog(bachecaGUI.getFrame(), "ToDo trasferito.");
         refreshToDoList();
     }
-
 }

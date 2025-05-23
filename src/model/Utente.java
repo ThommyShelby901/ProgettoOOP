@@ -8,6 +8,10 @@ public class Utente {
     private final String password;
     private final List<ToDo> listaToDo;
     private List<Bacheca> listaBacheche;
+    private static List<Utente> listaUtentiGlobali = new ArrayList<>();
+
+
+
 
     public Utente(String username, String password) {
         this.username = username;
@@ -20,11 +24,34 @@ public class Utente {
         return listaBacheche;
     }
 
+    public static List<Utente> getListaUtentiGlobali() {
+        return listaUtentiGlobali;
+    }
+
+    public static void inizializzaUtenti() {
+        if (listaUtentiGlobali.isEmpty()) {
+            listaUtentiGlobali.add(new Utente("mario", "1234"));
+            listaUtentiGlobali.add(new Utente("luigi", "1234"));
+            listaUtentiGlobali.add(new Utente("peach", "1234"));
+        }
+    }
+
+
     public Bacheca creaBacheca(String titolo, String descrizione) {
         Bacheca nuova = new Bacheca(titolo, descrizione);
         listaBacheche.add(nuova);
         return nuova;
     }
+
+    public String getNome() {
+        return this.username; // supponendo che il campo nome si chiami così
+    }
+
+    public String getPassword(){
+        return password;
+    }
+
+
 
 
     public void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione) {
@@ -97,15 +124,18 @@ public class Utente {
     }
 
     public ToDo cercaToDoPerTitoloEBoard(String titolo, Bacheca board) {
+        if (titolo == null || board == null) return null;
         for (ToDo t : listaToDo) {
             if (t.getBacheca() != null &&
                     t.getBacheca().equals(board) &&
+                    t.getTitoloToDo() != null &&
                     t.getTitoloToDo().equalsIgnoreCase(titolo)) {
                 return t;
             }
         }
-        return null; // Non trovato
+        return null;
     }
+
 
     public void eliminaToDo(ToDo todo) {
         if (todo == null) {
@@ -144,12 +174,14 @@ public class Utente {
     }
 
 
+
+
+
     public void aggiungiToDoCondiviso(ToDo todo) {
         if (!listaToDo.contains(todo)) {
             listaToDo.add(todo);
         }
     }
-
 
     public void rimuoviToDoCondiviso(ToDo todo) {
         listaToDo.remove(todo);

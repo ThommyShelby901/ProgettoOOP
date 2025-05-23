@@ -9,32 +9,40 @@ import model.Utente;
 import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.List;
 
 public class LoginController {
     private LoginFrame loginFrame;
+      // lista utenti globale
 
     public LoginController(LoginFrame loginFrame) {
         this.loginFrame = loginFrame;
+        this.loginFrame.getLoginButton().addActionListener(e -> performLogin());
 
-        this.loginFrame.getLoginButton().addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                performLogin();
-            }
-        });
+        Utente.inizializzaUtenti();
+
+
+
+
+        // **Esempio: crea utenti di prova nella lista globale**
+
     }
+
+
 
     private void performLogin() {
         String username = loginFrame.getUsername();
         String password = loginFrame.getPassword();
 
-        // Creo un oggetto Utente con i dati inseriti
-        Utente utente = new Utente(username, password);
+        Utente utente = Utente.getListaUtentiGlobali().stream()
+                .filter(u -> u.getNome().equals(username) && u.getPassword().equals(password))
+                .findFirst()
+                .orElse(null);
 
-        // Chiamo il metodo esitoAccesso() dalla classe Utente
-        if (utente.esitoAccesso()) {
+        if (utente != null) {
             System.out.println("Accesso riuscito");
 
-            // Se non ha bacheche, le creo di default
             if (utente.getListaBacheche().isEmpty()) {
                 Bacheca uni = utente.creaBacheca("Università", "Bacheca per le attività universitarie");
                 Bacheca lavoro = utente.creaBacheca("Lavoro", "Bacheca per le attività lavorative");
@@ -53,9 +61,10 @@ public class LoginController {
                 lavoro.aggiungiToDo(todo2);
             }
 
-
             loginFrame.dispose();
             HomeFrame homeFrame = new HomeFrame(username);
+
+            // Passa utente e lista utenti globali (se serve)
             new HomeController(homeFrame, utente);
             homeFrame.setVisible(true);
         } else {
@@ -63,4 +72,7 @@ public class LoginController {
             loginFrame.showMessage("Credenziali non valide, riprova.");
         }
     }
+
+
+
 }
