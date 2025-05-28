@@ -1,0 +1,10 @@
+org/example/gui/LoginFrame.class
+org/example/model/StatoToDo.class
+org/example/Main.class
+org/example/model/Bacheca.class
+org/example/controller/AppController.class
+org/example/model/Utente.class
+org/example/model/ToDo.class
+org/example/gui/BachecaGUI.class
+org/example/gui/ToDoGUI.class
+org/example/gui/HomeFrame.class
