@@ -2,6 +2,8 @@ package model;
 
 import java.util.List;
 import java.util.ArrayList;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 
 public class Utente {
     private final String username;
@@ -9,9 +11,6 @@ public class Utente {
     private final List<ToDo> listaToDo;
     private List<Bacheca> listaBacheche;
     private static List<Utente> listaUtentiGlobali = new ArrayList<>();
-
-
-
 
     public Utente(String username, String password) {
         this.username = username;
@@ -52,8 +51,6 @@ public class Utente {
     }
 
 
-
-
     public void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione) {
         for (Bacheca b : listaBacheche) {
             if (b.getTitoloBacheca().equalsIgnoreCase(titoloCorrente)) {
@@ -69,11 +66,14 @@ public class Utente {
         listaBacheche.removeIf(b -> b.getTitoloBacheca().equalsIgnoreCase(titolo));
     }
 
-    public boolean esitoAccesso() {
-        return (username.equals("user1") && password.equals("password1")) ||
-                (username.equals("giulia") && password.equals("ciao")) ||
-                (username.equals("marco") && password.equals("pwd"));
+    public void inizializzaBacheche() {
+        if (listaBacheche.isEmpty()) { // 🔥 Evita la duplicazione
+            listaBacheche.add(new Bacheca("Progetti", "Gestione dei progetti importanti"));
+            listaBacheche.add(new Bacheca("Personale", "Appunti e idee personali"));
+            listaBacheche.add(new Bacheca("Lavoro", "Attività legate al lavoro"));
+        }
     }
+
 
 
     public void creaToDo(String titolo, String descrizione, String sfondo, String coloreSfondo,
@@ -173,10 +173,6 @@ public class Utente {
         System.out.println("Bacheca destinazione non trovata.");
     }
 
-
-
-
-
     public void aggiungiToDoCondiviso(ToDo todo) {
         if (!listaToDo.contains(todo)) {
             listaToDo.add(todo);
@@ -194,10 +190,6 @@ public class Utente {
             }
         }
         return null;
-    }
-
-    public List<ToDo> getListaToDo() {
-        return listaToDo;
     }
 }
 

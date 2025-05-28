@@ -1,131 +1,131 @@
 package gui;
 
+import controller.AppController;
+import model.Bacheca;
+
 import javax.swing.*;
-import java.awt.*;
 
 public class HomeFrame {
-    // Istanza di JFrame che rappresenta la finestra principale
     private JFrame frame;
-    private JPanel HomeFrame;
-    private JPanel HomeFram;
-    private JPanel HomeFra;
-    private JButton btnVisualizzaBacheca;
+    private AppController controller;
 
-    // Componenti per l'interfaccia
-    private JLabel welcomeLabel;
-
-    // Componenti per la visualizzazione delle bacheche
-    private JLabel boardLabel;
+    // Componenti definiti nel form
+    private JPanel homePanel;
     private JList<String> boardList;
     private DefaultListModel<String> boardListModel;
-
-    // Pulsanti per le operazioni sulle bacheche
+    private JButton logoutButton;
     private JButton btnCreaBacheca;
     private JButton btnModificaBacheca;
     private JButton btnEliminaBacheca;
+    private JButton visualizzaButton;
 
-
-    // Pulsante per il logout
-    private JButton btnLogout;
-
-    // Costruttore: riceve il nome dell'utente per personalizzare il messaggio di benvenuto
-    public HomeFrame(String username) {
-        // Creazione del JFrame interno
-        frame = new JFrame("Home Page");
+    public HomeFrame(AppController controller, JFrame frameChiamante) {
+        this.controller = controller;
+        this.frame = frameChiamante;
+        if (homePanel == null) {
+            System.out.println("Errore: homePanel è null! Controlla il UI Designer.");
+            homePanel = new JPanel(); // 🔥 Inizializzazione di emergenza
+        }
+        this.frame.setContentPane(homePanel); // Usa il pannello definito nel form
+        frame.setSize(800, 600);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(800, 600);// Dimensione impostata sul frame, ma non sui componenti interni
         frame.setLocationRelativeTo(null);
 
-        // Pannello principale con GridLayout (disposizione verticale: una colonna, tante righe quante necessarie)
-        JPanel mainPanel = new JPanel(new GridLayout(0, 1));
-
-        // Messaggio di benvenuto
-        welcomeLabel = new JLabel("Benvenuto, " + username + "!");
-        mainPanel.add(welcomeLabel);
-
-        // Etichetta per la sezione delle bacheche
-        boardLabel = new JLabel("Bacheche");
-        mainPanel.add(boardLabel);
-
-        // Lista per visualizzare i nomi delle bacheche
+        // Popola la lista di bacheche predefinite dal Controller
         boardListModel = new DefaultListModel<>();
-        boardList = new JList<>(boardListModel);
-        JScrollPane scrollPane = new JScrollPane(boardList);
-        // Non impostiamo una dimensione preferita sullo scrollPane
-        mainPanel.add(scrollPane);
-
-        // Pannello dei pulsanti per le operazioni sulle bacheche
-        JPanel buttonPanel = new JPanel(); // Layout di default (FlowLayout)
-        btnCreaBacheca = new JButton("Crea Bacheca");
-        btnModificaBacheca = new JButton("Modifica Bacheca");
-        btnEliminaBacheca = new JButton("Elimina Bacheca");
-        btnVisualizzaBacheca = new JButton("Visualizza Bacheca");
-        buttonPanel.add(btnCreaBacheca);
-        buttonPanel.add(btnModificaBacheca);
-        buttonPanel.add(btnEliminaBacheca);
-        buttonPanel.add(btnVisualizzaBacheca);
-        mainPanel.add(buttonPanel);
-
-        // Pulsante per il logout
-        btnLogout = new JButton("Logout");
-        mainPanel.add(btnLogout);
-
-        // Aggiungiamo il pannello principale al frame
-        frame.add(mainPanel);
+        boardList.setModel(boardListModel);
+        aggiornaListaBacheche(); // Metodo per aggiornare la lista
 
 
-    }
+        // Listener per la gestione delle azioni dei pulsanti
+        logoutButton.addActionListener(e -> {
+            System.out.println("Bottone Visualizza Bacheca premuto!"); // 🔥 Debug per verificare se il listener si attiva
 
-    public JButton getBtnVisualizzaBacheca() {
-        return btnVisualizzaBacheca;
-    }
+            String selezionata = boardList.getSelectedValue(); // 🔥 Recupera la bacheca selezionata
+            System.out.println("Bacheca selezionata: " + selezionata); // 🔥 Debug per verificare la selezione
 
-    // Metodo wrapper per rendere visibile la finestra
-    public void showFrame() {
+            if (selezionata != null) {
+                Bacheca board = controller.getBachecaByTitolo(selezionata);
+                System.out.println("Board trovata? " + (board != null ? "Sì" : "No")); // 🔥 Debug per verificare se la bacheca esiste
+
+                if (board != null) {
+                    new ToDoGUI(controller, frame, board); // 🔥 Apri `ToDoGUI` con la bacheca corretta!
+                    frame.setVisible(false); // 🔥 Nasconde `HomeFrame`
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Bacheca non trovata!");
+                }
+            } else {
+                JOptionPane.showMessageDialog(frame, "Seleziona una bacheca!");
+            }
+        });
+
+
+
+
+        btnCreaBacheca.addActionListener(e -> {
+            String titolo = JOptionPane.showInputDialog(frame, "Inserisci il titolo della nuova bacheca:");
+            String descrizione = JOptionPane.showInputDialog(frame, "Inserisci la descrizione della nuova bacheca:");
+
+            if (titolo != null && !titolo.trim().isEmpty() && descrizione != null) {
+                controller.creaBacheca(titolo.trim(), descrizione.trim());
+                aggiornaListaBacheche();
+            } else {
+                JOptionPane.showMessageDialog(frame, "Titolo e descrizione non possono essere vuoti.");
+            }
+        });
+
+        btnModificaBacheca.addActionListener(e -> {
+            String selezionata = boardList.getSelectedValue();
+            if (selezionata != null) {
+                String nuovoTitolo = JOptionPane.showInputDialog(frame, "Modifica il titolo della bacheca:");
+                String nuovaDescrizione = JOptionPane.showInputDialog(frame, "Modifica la descrizione della bacheca:");
+
+                if (nuovoTitolo != null && nuovaDescrizione != null && !nuovoTitolo.trim().isEmpty()) {
+                    controller.modificaBacheca(selezionata, nuovoTitolo.trim(), nuovaDescrizione.trim());
+                    aggiornaListaBacheche();
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Titolo e descrizione non possono essere vuoti.");
+                }
+            } else {
+                JOptionPane.showMessageDialog(frame, "Seleziona una bacheca da modificare.");
+            }
+        });
+
+        btnEliminaBacheca.addActionListener(e -> {
+            String selezionata = boardList.getSelectedValue();
+            if (selezionata != null) {
+                controller.eliminaBacheca(selezionata); // La logica è gestita nel Controller
+                aggiornaListaBacheche();
+                JOptionPane.showMessageDialog(frame, "Bacheca eliminata con successo!");
+            } else {
+                JOptionPane.showMessageDialog(frame, "Seleziona una bacheca da eliminare.");
+            }
+        });
+
+        visualizzaButton.addActionListener(e -> {
+            frameChiamante.setVisible(true);
+            frame.dispose();
+        });
+
         frame.setVisible(true);
     }
 
-    // Metodo wrapper per chiudere il frame
-    public void dispose() {
-        frame.dispose();
+    private void aggiornaListaBacheche() {
+        boardListModel.clear();
+        for (String bacheca : controller.getListaBacheche()) {
+            boardListModel.addElement(bacheca);
+        }
     }
 
-    // Metodo wrapper per impostare la visibilità
-    public void setVisible(boolean visible) {
-        frame.setVisible(visible);
+    public DefaultListModel<String> getListaBachecheModel() {
+        return boardListModel;  // Assicurati che `boardListModel` sia il modello della tua `JList`
     }
 
-    // Getter per il JFrame interno (utile per ancorare eventuali dialog)
     public JFrame getFrame() {
-        return frame;
+        return frame;  // Ora `getFrame()` restituirà correttamente il riferimento al JFrame
     }
 
-    // Getters per i pulsanti e per il modello della lista
-    public JButton getBtnCreaBacheca() {
-        return btnCreaBacheca;
-    }
-
-    public JButton getBtnModificaBacheca() {
-        return btnModificaBacheca;
-    }
-
-    public JButton getBtnEliminaBacheca() {
-        return btnEliminaBacheca;
-    }
-
-    public JButton getBtnLogout() {
-        return btnLogout;
-    }
-
-    public DefaultListModel<String> getBoardListModel() {
-        return boardListModel;
-    }
-    public JList<String> getBoardList() {
-        return boardList;
-    }
-
-    // Metodo per mostrare messaggi all'utente
-    public void showMessage(String message) {
-        JOptionPane.showMessageDialog(frame, message);
+    private void createUIComponents() {
+        homePanel = new JPanel();
     }
 }

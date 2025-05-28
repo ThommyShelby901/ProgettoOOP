@@ -38,44 +38,11 @@ public class Bacheca {
         listaToDo.remove(todo);
     }
 
-    public void mostraToDo() {
-        for (ToDo t : listaToDo) {
-            System.out.println("- " + t.getTitoloToDo());
-        }
-    }
-
-    public void spostaToDo(String titoloDaSpostare, String titoloPosizione) {
-        // Questo metodo sarà richiamato dal controller,
-        // ma non contiene la logica operativa.
-    }
 
     public List<ToDo> getListaToDo() {
         return listaToDo;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;               // se sono lo stesso oggetto, ok
-        if (o == null || getClass() != o.getClass()) return false; // controlla classe
-        Bacheca bacheca = (Bacheca) o;
-        return titoloBacheca != null && titoloBacheca.equalsIgnoreCase(bacheca.titoloBacheca);
+
     }
 
-    @Override
-    public int hashCode() {
-        return titoloBacheca == null ? 0 : titoloBacheca.toLowerCase().hashCode();
-    }
-
-    public ToDo getToDoByTitolo(String titolo) {
-        for (ToDo t : listaToDo) {
-            if (t.getTitoloToDo().equalsIgnoreCase(titolo)) {
-                return t;
-            }
-        }
-        return null; // non trovato
-    }
-
-
-
-
-}

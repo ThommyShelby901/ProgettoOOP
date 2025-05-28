@@ -1,119 +1,122 @@
 package gui;
 
+import controller.AppController;
+import model.Bacheca;
+import model.ToDo;
+
 import javax.swing.*;
-import java.awt.*;
 
 public class BachecaGUI {
     private JFrame frame;
-    private DefaultListModel<String> todoListModel;
-    private JList<String> todoList;
+    private AppController controller;
+    private JFrame frameChiamante;
 
-    // Lista utenti condivisi e relativo modello
-    private DefaultListModel<String> condivisoListModel;
-    private JList<String> condivisoList;
-
-    private JButton btnCrea;
-    private JButton btnModifica;
-    private JButton btnElimina;
-    private JButton btnTrasferisci;
-    private JButton btnSposta;
-    private JButton btnCerca;
-    private JButton btnBack;
-
-    // Bottoni per condivisione
-    private JButton btnAggiungiCondivisione;
+    // Componenti definiti nella form
+    private JPanel bachecaPanel;
+    private JList<String> boardList;
+    private DefaultListModel<String> boardListModel;
+    private JButton btnGestisciToDo;
+    private JButton btnGestisciCondivisioni;
     private JButton btnRimuoviCondivisione;
+    private JButton btnIndietro;
 
-    private JLabel labelTitoloBacheca;
-
-    public BachecaGUI(String titoloBacheca) {
-        frame = new JFrame("Bacheca: " + titoloBacheca);
+    public BachecaGUI(AppController controller, JFrame frameChiamante) {
+        this.controller = controller;
+        this.frameChiamante = frameChiamante;
+        this.frame = new JFrame("Gestione Bacheche");
+        frame.setContentPane(bachecaPanel);
+        frame.setSize(600, 400);
         frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        frame.setSize(600, 450);
         frame.setLocationRelativeTo(null);
 
-        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
-        frame.setContentPane(mainPanel);
+        // Popola la lista delle bacheche dal Controller
+        boardListModel = new DefaultListModel<>();
+        boardList.setModel(boardListModel);
+        aggiornaListaBacheche();
 
-        labelTitoloBacheca = new JLabel("Bacheca: " + titoloBacheca, SwingConstants.CENTER);
-        labelTitoloBacheca.setFont(new Font("Arial", Font.BOLD, 18));
-        mainPanel.add(labelTitoloBacheca, BorderLayout.NORTH);
+        // Listener per aprire la gestione dei To-Do
+        btnGestisciToDo.addActionListener(e -> {
+            String selezionata = boardList.getSelectedValue();
+            if (selezionata != null) {
+                Bacheca board = controller.getBachecaByTitolo(selezionata);
+                if (board != null) {
+                    new ToDoGUI(controller, frame, board);
+                    frame.setVisible(false);
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Bacheca non trovata!");
+                }
+            } else {
+                JOptionPane.showMessageDialog(frame, "Seleziona una bacheca!");
+            }
+        });
 
-        // Panel centrale diviso: ToDo a sinistra, Condivisioni a destra
-        JPanel centerPanel = new JPanel(new GridLayout(1, 2, 10, 10));
+        btnGestisciCondivisioni.addActionListener(e -> {
+            String selezionata = boardList.getSelectedValue();
+            if (selezionata != null) {
+                Bacheca board = controller.getBachecaByTitolo(selezionata);
+                if (board != null) {
+                    String titoloToDo = JOptionPane.showInputDialog(frame, "Inserisci il titolo del To-Do da condividere:");
+                    ToDo todo = controller.getToDoPerTitoloEBoard(titoloToDo, board);
 
-        // Lista ToDo
-        todoListModel = new DefaultListModel<>();
-        todoList = new JList<>(todoListModel);
-        JScrollPane todoScroll = new JScrollPane(todoList);
-        todoScroll.setBorder(BorderFactory.createTitledBorder("ToDo"));
-        centerPanel.add(todoScroll);
+                    if (todo != null) {
+                        String nomeUtente = JOptionPane.showInputDialog(frame, "Inserisci il nome dell'utente:");
+                        if (nomeUtente != null && !nomeUtente.trim().isEmpty()) {
+                            controller.aggiungiCondivisione(todo, nomeUtente.trim());
+                            JOptionPane.showMessageDialog(frame, "To-Do condiviso con " + nomeUtente);
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Nome utente non valido.");
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(frame, "To-Do non trovato!");
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Bacheca non trovata!");
+                }
+            } else {
+                JOptionPane.showMessageDialog(frame, "Seleziona una bacheca!");
+            }
+        });
 
-        // Lista condivisioni
-        condivisoListModel = new DefaultListModel<>();
-        condivisoList = new JList<>(condivisoListModel);
-        JScrollPane condivisoScroll = new JScrollPane(condivisoList);
-        condivisoScroll.setBorder(BorderFactory.createTitledBorder("Condivisioni"));
-        centerPanel.add(condivisoScroll);
+        btnRimuoviCondivisione.addActionListener(e -> {
+            String selezionata = boardList.getSelectedValue();
+            if (selezionata != null) {
+                Bacheca board = controller.getBachecaByTitolo(selezionata);
+                if (board != null) {
+                    String titoloToDo = JOptionPane.showInputDialog(frame, "Inserisci il titolo del To-Do:");
+                    ToDo todo = controller.getToDoPerTitoloEBoard(titoloToDo, board);
 
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
+                    if (todo != null) {
+                        String nomeUtente = JOptionPane.showInputDialog(frame, "Inserisci il nome dell'utente da rimuovere:");
+                        if (nomeUtente != null && !nomeUtente.trim().isEmpty()) {
+                            controller.rimuoviCondivisione(todo, nomeUtente.trim());
+                            JOptionPane.showMessageDialog(frame, "Condivisione rimossa con " + nomeUtente);
+                        } else {
+                            JOptionPane.showMessageDialog(frame, "Nome utente non valido.");
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(frame, "To-Do non trovato!");
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Bacheca non trovata!");
+                }
+            } else {
+                JOptionPane.showMessageDialog(frame, "Seleziona una bacheca!");
+            }
+        });
 
-        // Pannello bottoni in basso
-        JPanel buttonPanel = new JPanel(new GridLayout(3, 4, 8, 8));
+        // Listener per tornare alla schermata precedente
+        btnIndietro.addActionListener(e -> {
+            frameChiamante.setVisible(true);
+            frame.dispose();
+        });
 
-        btnCrea = new JButton("Crea");
-        btnModifica = new JButton("Modifica");
-        btnElimina = new JButton("Elimina");
-        btnTrasferisci = new JButton("Trasferisci");
-        btnSposta = new JButton("Sposta");
-        btnCerca = new JButton("Cerca");
-        btnBack = new JButton("Indietro");
-
-        btnAggiungiCondivisione = new JButton("Aggiungi Condivisione");
-        btnRimuoviCondivisione = new JButton("Rimuovi Condivisione");
-
-        buttonPanel.add(btnCrea);
-        buttonPanel.add(btnModifica);
-        buttonPanel.add(btnElimina);
-        buttonPanel.add(btnTrasferisci);
-        buttonPanel.add(btnSposta);
-        buttonPanel.add(btnCerca);
-        buttonPanel.add(btnBack);
-
-        // Spazi vuoti per allineare i nuovi bottoni
-        buttonPanel.add(new JLabel(""));
-        buttonPanel.add(new JLabel(""));
-
-        buttonPanel.add(btnAggiungiCondivisione);
-        buttonPanel.add(btnRimuoviCondivisione);
-        buttonPanel.add(new JLabel(""));
-
-        mainPanel.add(buttonPanel, BorderLayout.SOUTH);
+        frame.setVisible(true);
     }
 
-    // Getter bottoni principali
-    public JButton getBtnCrea() { return btnCrea; }
-    public JButton getBtnModifica() { return btnModifica; }
-    public JButton getBtnElimina() { return btnElimina; }
-    public JButton getBtnTrasferisci() { return btnTrasferisci; }
-    public JButton getBtnSposta() { return btnSposta; }
-    public JButton getBtnCerca() { return btnCerca; }
-    public JButton getBtnBack() { return btnBack; }
-
-    // Getter nuovi bottoni condivisioni
-    public JButton getBtnAggiungiCondivisione() { return btnAggiungiCondivisione; }
-    public JButton getBtnRimuoviCondivisione() { return btnRimuoviCondivisione; }
-
-    // Getter lista ToDo e modello
-    public JList<String> getTodoList() { return todoList; }
-    public DefaultListModel<String> getTodoListModel() { return todoListModel; }
-
-    // Getter lista condivisioni e modello
-    public JList<String> getCondivisoList() { return condivisoList; }
-    public DefaultListModel<String> getCondivisoListModel() { return condivisoListModel; }
-
-    public JFrame getFrame() { return frame; }
-
-    public void show() { frame.setVisible(true); }
-    public void dispose() { frame.dispose(); }
+    private void aggiornaListaBacheche() {
+        boardListModel.clear();
+        for (String bacheca : controller.getListaBacheche()) {
+            boardListModel.addElement(bacheca);
+        }
+    }
 }

@@ -1,17 +1,15 @@
-import controller.LoginController;
+import javax.swing.*;
+import controller.AppController;
 import gui.LoginFrame;
-import model.Bacheca;
-import model.Utente;
-
-import javax.swing.SwingUtilities;
 
 public class Main {
     public static void main(String[] args) {
-
-        LoginFrame loginFrame = new LoginFrame();
-        new LoginController(loginFrame);
-        loginFrame.setVisible(true);
-
+        SwingUtilities.invokeLater(() -> {
+            LoginFrame loginFrame = new LoginFrame(); // 🔥 Creiamo prima il LoginFrame
+            AppController controller = new AppController(loginFrame); // 🔥 Ora passiamo il LoginFrame al Controller
+            loginFrame.setController(controller); // 🔥 Colleghiamo il Controller al LoginFrame
+        });
     }
 }
+
 

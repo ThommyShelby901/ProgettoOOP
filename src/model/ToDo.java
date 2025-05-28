@@ -1,9 +1,9 @@
 package model;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Objects;
 
 public class ToDo {
     private Utente autore;
@@ -24,7 +24,6 @@ public class ToDo {
     public void setSfondo(String sfondo){ this.sfondo=sfondo; }
     public void setDescrizioneToDo(String descrizioneToDo){ this.descrizioneToDo=descrizioneToDo; }
     public void setColoreSfondo(String coloreSfondo){ this.coloreSfondo=coloreSfondo; }
-    public void setDataScadenza(String dataScadenza){ this.dataScadenza=LocalDate.parse(dataScadenza); }
     public void setBacheca(Bacheca bacheca){ this.bacheca=bacheca; }
     public void setStatoToDo(StatoToDo statoToDo){ this.statoToDo=statoToDo; }
 
@@ -107,58 +106,18 @@ public class ToDo {
         return dataScadenza.equals(LocalDate.now());
     }
 
-    public boolean verificaScadenzaEntro(LocalDate dataLimite) {
-        if (dataScadenza == null || dataLimite == null) return false;
-        return !dataScadenza.isAfter(dataLimite);
+    public void setDataScadenza(String dataScadenza) {
+        try {
+            this.dataScadenza = LocalDate.parse(dataScadenza);
+        } catch (DateTimeParseException e) {
+            System.out.println("Errore: Formato data non valido. Usa AAAA-MM-GG.");
+        }
     }
 
-    public void visualizzaScadenza() {
-        if (dataScadenza == null) {
-            System.out.println(titoloToDo + " (nessuna scadenza)");
-            return;
-        }
-        if (verificaScadenzaOggi()) {
-            System.out.println("\u001B[33m" + titoloToDo + " - Scade oggi (" + dataScadenza + ")\u001B[0m");
-        } else if (dataScadenza.isBefore(LocalDate.now())) {
-            System.out.println("\u001B[31m" + titoloToDo + " - SCADUTO (" + dataScadenza + ")\u001B[0m");
-        } else {
-            System.out.println(titoloToDo + " - Scade il " + dataScadenza);
-        }
-    }
 
     public LocalDate getDataScadenza() {
         return dataScadenza;
     }
-
-
-    public String getColoreSfondo() {
-        return coloreSfondo;
-    }
-
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof ToDo)) return false;
-        ToDo other = (ToDo) o;
-        return this.titoloToDo != null && other.titoloToDo != null
-                && this.titoloToDo.equalsIgnoreCase(other.titoloToDo)
-                && this.autore != null && other.autore != null
-                && this.autore.equals(other.autore)
-                && this.bacheca != null && other.bacheca != null
-                && this.bacheca.equals(other.bacheca);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(
-                titoloToDo != null ? titoloToDo.toLowerCase() : "",
-                autore,
-                bacheca
-        );
-    }
-
-
 
 }
 
