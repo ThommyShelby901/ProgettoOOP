@@ -1,13 +1,14 @@
 package org.example.controller;
 
+import org.example.dao.DatabaseDAO;
 import org.example.gui.HomeFrame;
 import org.example.gui.LoginFrame;
+import org.example.implementazionePostgresDAO.DatabaseImplementazionePostgresDAO;
 import org.example.model.Bacheca;
 import org.example.model.ToDo;
 import org.example.model.Utente;
 
-import javax.swing.*;
-import java.time.LocalDate;
+import java.sql.SQLException;
 import java.util.List;
 
 public class AppController {
@@ -17,37 +18,34 @@ public class AppController {
 
     public AppController(LoginFrame loginFrame) {
         this.loginFrame = loginFrame;
-        Utente.inizializzaUtenti();
         loginFrame.getLoginButton().addActionListener(e -> performLogin()); // 🔥 Collega il pulsante al login!
     }
 
 
     public void performLogin() {
-
-            System.out.println("Esecuzione di performLogin()..."); // 🔥 Debug
-
-
-        if (loginFrame == null) {
-            System.out.println("Errore: loginFrame è null!");
-            return;
-        }
-
         String username = loginFrame.getUsername();
         String password = loginFrame.getPassword();
 
-        utenteCorrente = Utente.getListaUtentiGlobali().stream()
-                .filter(u -> u.getNome().equals(username) && u.getPassword().equals(password))
-                .findFirst()
-                .orElse(null);
+        try {
+            DatabaseDAO dao = new DatabaseImplementazionePostgresDAO();
+            utenteCorrente = dao.getUtenteByUsername(username);
 
-        if (utenteCorrente != null) {
-            utenteCorrente.inizializzaBacheche();
-            loginFrame.chiudiFinestra();
-            homeFrame = new HomeFrame(this, loginFrame.getFrame()); // 🔥 Apriamo la Home SOLO dopo il login riuscito
-        } else {
-            loginFrame.showMessage("Credenziali non valide, riprova.");
+            if (utenteCorrente != null && utenteCorrente.getPassword().equals(password)) {
+                List<Bacheca> bachecheUtente = dao.getBachecheByUsername(); // 🔥 Recupera le bacheche dal DB
+                utenteCorrente.setListaBacheche(bachecheUtente); // 🔥 Assegna le bacheche all'utente
+
+                loginFrame.chiudiFinestra();
+                homeFrame = new HomeFrame(this, loginFrame.getFrame());
+            } else {
+                loginFrame.showMessage("Credenziali non valide, riprova.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            loginFrame.showMessage("Errore di connessione al database.");
         }
     }
+
+
 
 
 

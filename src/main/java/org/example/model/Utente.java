@@ -27,15 +27,6 @@ public class Utente {
         return listaUtentiGlobali;
     }
 
-    public static void inizializzaUtenti() {
-        if (listaUtentiGlobali.isEmpty()) {
-            listaUtentiGlobali.add(new Utente("mario", "1234"));
-            listaUtentiGlobali.add(new Utente("luigi", "1234"));
-            listaUtentiGlobali.add(new Utente("peach", "1234"));
-        }
-    }
-
-
     public Bacheca creaBacheca(String titolo, String descrizione) {
         Bacheca nuova = new Bacheca(titolo, descrizione);
         listaBacheche.add(nuova);
@@ -190,6 +181,9 @@ public class Utente {
             }
         }
         return null;
+    }
+    public void setListaBacheche(List<Bacheca> listaBacheche) {
+        this.listaBacheche = listaBacheche;
     }
 }
 
