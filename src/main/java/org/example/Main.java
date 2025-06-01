@@ -4,7 +4,7 @@ import javax.swing.*;
 import org.example.controller.AppController;
 import org.example.dao.DatabaseDAO;
 import org.example.gui.LoginFrame;
-import org.example.implementazionePostgresDAO.DatabaseImplementazionePostgresDAO;
+import org.example.implementazionepostgresdao.DatabaseImplementazionePostgresDAO;
 
 import java.sql.SQLException;
 
@@ -18,20 +18,21 @@ public class Main {
             dao.aggiungiUtente("luigi", "5678");
             dao.aggiungiUtente("peach", "91011");
 
-            // Inizializziamo le bacheche per TUTTI gli utenti
-            dao.aggiungiBacheca("Tempo Libero", "Hobby e svago");
-            dao.aggiungiBacheca("Università", "Studio e appunti");
-            dao.aggiungiBacheca("Lavoro", "Gestione progetti e task");
 
-            System.out.println("Utenti e bacheche inizializzati nel database!");
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
         SwingUtilities.invokeLater(() -> {
-            LoginFrame loginFrame = new LoginFrame();
-            AppController controller = new AppController(loginFrame);
-            loginFrame.setController(controller);
+            try {
+                DatabaseDAO dao = new DatabaseImplementazionePostgresDAO(); // 🔥 Una sola istanza per tutto il programma
+                LoginFrame loginFrame = new LoginFrame();
+                AppController controller = new AppController(dao, loginFrame);
+                loginFrame.setController(controller);
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
         });
     }
 }

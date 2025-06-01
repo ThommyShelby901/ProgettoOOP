@@ -4,38 +4,103 @@ import org.example.controller.AppController;
 
 import javax.swing.*;
 
+import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
+
 public class LoginFrame {
     private JFrame frame;
     private AppController controller;
-    private JPanel panel;
-    private JTextField usernameField;  // Ora è un campo di classe!
+    private JPanel loginPanel;
+    private JPanel registrazionePanel;
+    private JTextField usernameField;
     private JPasswordField passwordField;
-    private JButton loginButton; // Ora è un campo di classe!
+    private JButton loginButton;
+    private JButton registraButton;
+    private JTextField usernameR;
+    private JPasswordField passwordR;
+    private JButton confermaRegistrazioneButton;
+    private JButton indietroButton;
+
 
     public LoginFrame() {
         frame = new JFrame("Login");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
         frame.setSize(400, 300);
         frame.setLocationRelativeTo(null);
+        frame.setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.Y_AXIS));
 
-        panel = new JPanel();
-        panel.add(new JLabel("Username:"));
-        usernameField = new JTextField(15);  // Rimosso `JTextField` locale, ora è un campo della classe
-        panel.add(usernameField);
 
-        panel.add(new JLabel("Password:"));
-        passwordField = new JPasswordField(15);  // Stesso discorso per il campo password
-        panel.add(passwordField);
+        loginPanel = new JPanel();
+        loginPanel.add(new JLabel("Username:"));
+        usernameField = new JTextField(15);
+        loginPanel.add(usernameField);
+
+        loginPanel.add(new JLabel("Password:"));
+        passwordField = new JPasswordField(15);
+        loginPanel.add(passwordField);
 
         loginButton = new JButton("Login");
-        panel.add(loginButton);
+        loginPanel.add(loginButton);
+
+        registraButton = new JButton("Registrati");
+        loginPanel.add(registraButton);
 
 
-        frame.add(panel);
+        registrazionePanel = new JPanel();
+        registrazionePanel.add(new JLabel("Username per registrarti:"));
+        usernameR = new JTextField(15);
+        registrazionePanel.add(usernameR);
+
+        registrazionePanel.add(new JLabel("Password per registrarti:"));
+        passwordR = new JPasswordField(15);
+        registrazionePanel.add(passwordR);
+
+        indietroButton = new JButton("Indietro");
+        registrazionePanel.add(indietroButton);
+
+        confermaRegistrazioneButton = new JButton("Conferma Registrazione");
+        registrazionePanel.add(confermaRegistrazioneButton);
+
+        registrazionePanel.setVisible(false);
+        frame.add(loginPanel);
+        frame.add(registrazionePanel);
         frame.setVisible(true);
     }
 
-    // **Metodi per ottenere i dati**
+
+    public void setController(AppController controller) {
+        this.controller = controller;
+
+        loginButton.addActionListener(e -> controller.performLogin());
+
+        registraButton.addActionListener(e -> {
+
+            loginPanel.setVisible(false);
+            registrazionePanel.setVisible(true);
+        });
+
+        confermaRegistrazioneButton.addActionListener(e -> {
+            String username = usernameR.getText();
+            String password = new String(passwordR.getPassword());
+
+            if (username.isEmpty() || password.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Errore: Compila tutti i campi!");
+                return;
+            }
+
+            controller.registraUtente(username, password);
+        });
+
+        indietroButton.addActionListener(e -> {
+
+            registrazionePanel.setVisible(false); //  Nasconde la registrazione
+            loginPanel.setVisible(true); //  Mostra il login
+        });
+
+    }
+
+
+
+        // **Metodi per ottenere i dati**
     public String getUsername() {
         return usernameField.getText();  // Recupera il valore del campo username
     }
@@ -59,13 +124,5 @@ public class LoginFrame {
     public JFrame getFrame() {
         return frame;
     }
-
-    public void setController(AppController controller) { // 🔥 Metodo per collegare il Controller dopo la creazione
-        this.controller = controller;
-        loginButton.addActionListener(e -> {
-            System.out.println("Bottone login premuto!"); // 🔥 Verifica se il bottone risponde
-            controller.performLogin();
-        });
-
-    }
 }
+

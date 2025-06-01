@@ -16,6 +16,8 @@ public class ToDo {
     private Bacheca bacheca;
     private StatoToDo statoToDo;
     private final List<Utente> condivisoCon=new ArrayList<>();
+    private int id;
+    private String titoloBacheca;
 
     //essendo opzionali andiamo a definirli con set
     public void setAutore(Utente autore){ this.autore=autore; }
@@ -24,8 +26,21 @@ public class ToDo {
     public void setSfondo(String sfondo){ this.sfondo=sfondo; }
     public void setDescrizioneToDo(String descrizioneToDo){ this.descrizioneToDo=descrizioneToDo; }
     public void setColoreSfondo(String coloreSfondo){ this.coloreSfondo=coloreSfondo; }
-    public void setBacheca(Bacheca bacheca){ this.bacheca=bacheca; }
+    public void setBacheca(String titoloBacheca) {
+        this.titoloBacheca = titoloBacheca; // 🔥 Assegna direttamente il titolo!
+    }
+
     public void setStatoToDo(StatoToDo statoToDo){ this.statoToDo=statoToDo; }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+
 
     public List<Utente> getCondivisoCon() {
         return condivisoCon;
@@ -47,8 +62,8 @@ public class ToDo {
         return titoloToDo;
     }
 
-    public Bacheca getBacheca(){
-        return bacheca;
+    public String getBacheca(){
+        return titoloBacheca;
     }
 
     public void aggiungiCondivisione(Utente richiedente, Utente utenteDaAggiungere) {
@@ -110,7 +125,7 @@ public class ToDo {
         try {
             this.dataScadenza = LocalDate.parse(dataScadenza);
         } catch (DateTimeParseException e) {
-            System.out.println("Errore: Formato data non valido. Usa AAAA-MM-GG.");
+            e.printStackTrace();
         }
     }
 
@@ -118,6 +133,23 @@ public class ToDo {
     public LocalDate getDataScadenza() {
         return dataScadenza;
     }
+
+    public String getSfondo() {
+        return sfondo;
+    }
+
+    public String getColoreSfondo() {
+        return coloreSfondo;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public StatoToDo getStatoToDo() {
+        return statoToDo;
+    }
+
 
 }
 
