@@ -4,17 +4,20 @@ import org.example.controller.AppController;
 
 import javax.swing.*;
 
-import static javax.swing.WindowConstants.EXIT_ON_CLOSE;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 
 public class LoginFrame {
     private JFrame frame;
     private AppController controller;
+    private JPanel principale;
     private JPanel loginPanel;
     private JPanel registrazionePanel;
     private JTextField usernameField;
     private JPasswordField passwordField;
     private JButton loginButton;
-    private JButton registraButton;
+    private JButton registratiButton;
     private JTextField usernameR;
     private JPasswordField passwordR;
     private JButton confermaRegistrazioneButton;
@@ -23,78 +26,58 @@ public class LoginFrame {
 
     public LoginFrame() {
         frame = new JFrame("Login");
-        frame.setDefaultCloseOperation(EXIT_ON_CLOSE);
-        frame.setSize(400, 300);
-        frame.setLocationRelativeTo(null);
-        frame.setLayout(new BoxLayout(frame.getContentPane(), BoxLayout.Y_AXIS));
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setContentPane(principale);
+        frame.pack();
+        frame.setSize(800, 400);
 
-
-        loginPanel = new JPanel();
-        loginPanel.add(new JLabel("Username:"));
-        usernameField = new JTextField(15);
-        loginPanel.add(usernameField);
-
-        loginPanel.add(new JLabel("Password:"));
-        passwordField = new JPasswordField(15);
-        loginPanel.add(passwordField);
-
-        loginButton = new JButton("Login");
-        loginPanel.add(loginButton);
-
-        registraButton = new JButton("Registrati");
-        loginPanel.add(registraButton);
-
-
-        registrazionePanel = new JPanel();
-        registrazionePanel.add(new JLabel("Username per registrarti:"));
-        usernameR = new JTextField(15);
-        registrazionePanel.add(usernameR);
-
-        registrazionePanel.add(new JLabel("Password per registrarti:"));
-        passwordR = new JPasswordField(15);
-        registrazionePanel.add(passwordR);
-
-        indietroButton = new JButton("Indietro");
-        registrazionePanel.add(indietroButton);
-
-        confermaRegistrazioneButton = new JButton("Conferma Registrazione");
-        registrazionePanel.add(confermaRegistrazioneButton);
-
-        registrazionePanel.setVisible(false);
-        frame.add(loginPanel);
-        frame.add(registrazionePanel);
-        frame.setVisible(true);
-    }
-
-
-    public void setController(AppController controller) {
-        this.controller = controller;
-
-        loginButton.addActionListener(e -> controller.performLogin());
-
-        registraButton.addActionListener(e -> {
-
-            loginPanel.setVisible(false);
-            registrazionePanel.setVisible(true);
-        });
-
-        confermaRegistrazioneButton.addActionListener(e -> {
-            String username = usernameR.getText();
-            String password = new String(passwordR.getPassword());
-
-            if (username.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(frame, "Errore: Compila tutti i campi!");
-                return;
+        loginButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (controller != null) {
+                    controller.handleLogin(usernameField.getText(), new String(passwordField.getPassword()));
+                }
             }
-
-            controller.registraUtente(username, password);
         });
 
-        indietroButton.addActionListener(e -> {
-
-            registrazionePanel.setVisible(false); //  Nasconde la registrazione
-            loginPanel.setVisible(true); //  Mostra il login
+        registratiButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ((CardLayout)principale.getLayout()).show(principale, "registrazionePanel");
+            }
         });
+
+        confermaRegistrazioneButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String username = usernameR.getText();
+                String password = new String(passwordR.getPassword());
+
+                if (username.isEmpty() || password.isEmpty()) {
+                    showMessage("Errore: Compila tutti i campi!");
+                    return;
+                }
+                if (controller != null) {
+                    controller.handleRegistration(username, password);
+                }
+
+                // Torna al login DOPO la registrazione
+                ((CardLayout)principale.getLayout()).show(principale, "loginPanel");
+
+                // Pulisce i campi
+                usernameR.setText("");
+                passwordR.setText("");
+            }
+        });
+
+
+        indietroButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ((CardLayout)principale.getLayout()).show(principale, "loginPanel");
+            }
+        });
+        frame.setVisible(true);
 
     }
 
@@ -123,6 +106,9 @@ public class LoginFrame {
 
     public JFrame getFrame() {
         return frame;
+    }
+    public void setController(AppController controller) {
+        this.controller = controller;
     }
 }
 

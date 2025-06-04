@@ -6,7 +6,7 @@ import java.util.List;
 public class Bacheca {
     private String titoloBacheca;
     private String descrizioneBacheca;
-    private final List<ToDo> listaToDo;
+
     private List<String> listaCondivisioni;
 
 
@@ -14,7 +14,7 @@ public class Bacheca {
     public Bacheca( String titoloBacheca, String descrizioneBacheca) {
         this.titoloBacheca = titoloBacheca;
         this.descrizioneBacheca = descrizioneBacheca;
-        this.listaToDo = new ArrayList<>();
+
         this.listaCondivisioni= new ArrayList<>();
     }
 
@@ -27,9 +27,7 @@ public class Bacheca {
         return titoloBacheca;
     }
 
-    public ToDo getUltimoToDo() {
-        return listaToDo.isEmpty() ? null : listaToDo.get(listaToDo.size() - 1);
-    }
+
 
     public void setTitoloBacheca(String titoloBacheca) {
         this.titoloBacheca = titoloBacheca;
@@ -44,16 +42,6 @@ public class Bacheca {
         this.descrizioneBacheca = descrizioneBacheca;
     }
 
-    public void aggiungiToDo(ToDo todo) {
-        listaToDo.add(todo);
-    }
 
-    public void rimuoviToDo(ToDo todo) {
-        listaToDo.remove(todo);
-    }
-
-    public List<ToDo> getListaToDo() {
-        return listaToDo;
-    }
 }
 

@@ -18,6 +18,7 @@ public class ToDo {
     private final List<Utente> condivisoCon=new ArrayList<>();
     private int id;
     private String titoloBacheca;
+    private int ordine;
 
     //essendo opzionali andiamo a definirli con set
     public void setAutore(Utente autore){ this.autore=autore; }
@@ -27,7 +28,11 @@ public class ToDo {
     public void setDescrizioneToDo(String descrizioneToDo){ this.descrizioneToDo=descrizioneToDo; }
     public void setColoreSfondo(String coloreSfondo){ this.coloreSfondo=coloreSfondo; }
     public void setBacheca(String titoloBacheca) {
-        this.titoloBacheca = titoloBacheca; // 🔥 Assegna direttamente il titolo!
+        this.titoloBacheca = titoloBacheca;
+        // Aggiungi questa linea per sincronizzare l'oggetto Bacheca
+        if (this.autore != null) {
+            this.bacheca = this.autore.getBachecaByTitolo(titoloBacheca);
+        }
     }
 
     public void setStatoToDo(StatoToDo statoToDo){ this.statoToDo=statoToDo; }
@@ -85,12 +90,9 @@ public class ToDo {
         }
 
         condivisoCon.add(utenteDaAggiungere);
-        Bacheca bachecaDest = utenteDaAggiungere.getBachecaByTitolo(bacheca.getTitoloBacheca());
-        if (bachecaDest != null) {
-            bachecaDest.aggiungiToDo(this);
+
             utenteDaAggiungere.aggiungiToDoCondiviso(this);
-        }
-        System.out.println("Condivisione aggiunta con successo.");
+
     }
 
     public void eliminaCondivisione(Utente richiedente, Utente utenteDaRimuovere) {
@@ -108,11 +110,9 @@ public class ToDo {
         }
 
         condivisoCon.remove(utenteDaRimuovere);
-        Bacheca bachecaDest = utenteDaRimuovere.getBachecaByTitolo(bacheca.getTitoloBacheca());
-        if (bachecaDest != null) {
-            bachecaDest.rimuoviToDo(this);
+
             utenteDaRimuovere.rimuoviToDoCondiviso(this);
-        }
+
         System.out.println("Condivisione rimossa con successo.");
     }
 
@@ -150,6 +150,12 @@ public class ToDo {
         return statoToDo;
     }
 
+    public int getOrdine() {
+        return ordine;
+    }
 
+    public void setOrdine(int ordine) {
+        this.ordine=ordine;
+    }
 }
 

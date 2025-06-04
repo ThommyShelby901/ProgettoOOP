@@ -3,6 +3,7 @@ package org.example.implementazionepostgresdao;
 import org.example.dao.DatabaseDAO;
 import org.example.database.ConnessioneDatabase;
 import org.example.model.Bacheca;
+import org.example.model.StatoToDo;
 import org.example.model.ToDo;
 import org.example.model.Utente;
 
@@ -11,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -67,48 +69,39 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         }
     }
 
-    @Override
-    public Bacheca aggiungiBacheca(String titolo, String descrizione, String username) {
-        if (titolo == null || titolo.trim().isEmpty() || descrizione == null || descrizione.trim().isEmpty()) {
-            return null;
-        }
 
-        String queryInsert = "INSERT INTO bacheca (titolo, descrizione, username) VALUES (?, ?, ?)";
-
-        try (PreparedStatement pstmt = connection.prepareStatement(queryInsert)) {
-            pstmt.setString(1, titolo);
-            pstmt.setString(2, descrizione);
-            pstmt.setString(3, username);
-            int rowsAffected = pstmt.executeUpdate();
-
-            if (rowsAffected > 0) {
-                return new Bacheca(titolo, descrizione); // 🔥 Restituisce direttamente l'oggetto senza variabile temporanea
-            } else {
-                return null;
+        // Mantieni solo operazioni CRUD sul database
+        @Override
+        public Bacheca aggiungiBacheca(String titolo, String descrizione, String username) throws SQLException {
+            String query = "INSERT INTO bacheca (titolo, descrizione, username) VALUES (?, ?, ?)";
+            try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+                pstmt.setString(1, titolo);
+                pstmt.setString(2, descrizione);
+                pstmt.setString(3, username);
+                pstmt.executeUpdate();
+                return new Bacheca(titolo, descrizione);
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
         }
-    }
 
 
 
 
     @Override
-    public void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione) {
+    public void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione, String username) {
         if (titoloCorrente == null || titoloCorrente.trim().isEmpty() ||
                 nuovoTitolo == null || nuovoTitolo.trim().isEmpty() ||
-                nuovaDescrizione == null || nuovaDescrizione.trim().isEmpty()) {
+                nuovaDescrizione == null || nuovaDescrizione.trim().isEmpty() ||
+                username == null || username.trim().isEmpty()) {
             return;
         }
 
-        String query = "UPDATE bacheca SET titolo = ?, descrizione = ? WHERE titolo = ?";
+        String query = "UPDATE bacheca SET titolo = ?, descrizione = ? WHERE titolo = ? AND username = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, nuovoTitolo);
             pstmt.setString(2, nuovaDescrizione);
             pstmt.setString(3, titoloCorrente);
+            pstmt.setString(4, username);
             pstmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -116,18 +109,23 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     @Override
-    public void eliminaBacheca(String titolo) throws SQLException {
-        String query = "DELETE FROM bacheca WHERE titolo = ?";
+    public void eliminaBacheca(String titolo, String username) throws SQLException {
+        if (titolo == null || titolo.trim().isEmpty() || username == null || username.trim().isEmpty()) {
+            return;
+        }
+
+        String query = "DELETE FROM bacheca WHERE titolo = ? AND username = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, titolo);
+            pstmt.setString(2, username);
             pstmt.executeUpdate();
         }
     }
 
     @Override
     public List<Bacheca> getListaBachecheDalDB(String username) throws SQLException {
-        String query = "SELECT titolo, descrizione FROM bacheca WHERE username = ? OR username IS NULL";
+        String query = "SELECT titolo, descrizione FROM bacheca WHERE username = ?";
         return executeBachecaQuery(query, username);
     }
 
@@ -136,30 +134,30 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     @Override
     public void salvaBachechePredefinite(List<Bacheca> bacheche, String username) throws SQLException {
         String query = "INSERT INTO bacheca (titolo, descrizione, username) VALUES (?, ?, ?) " +
-                "ON CONFLICT (titolo) DO UPDATE SET username = EXCLUDED.username";
+                "ON CONFLICT (titolo, username) DO NOTHING";
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(3, username); // 🔥 Imposta `username` una sola volta, fuori dal loop
-
             for (Bacheca bacheca : bacheche) {
                 pstmt.setString(1, bacheca.getTitoloBacheca());
                 pstmt.setString(2, bacheca.getDescrizioneBacheca());
-                pstmt.addBatch(); // 🔥 Aggiunge al batch senza reimpostare `username`
+                pstmt.setString(3, username); // Questo associa la bacheca all'utente
+                pstmt.addBatch();
             }
-            pstmt.executeBatch(); // 🔥 Esegue tutto il batch processing
+            pstmt.executeBatch();
         }
     }
 
 
 
+    @Override
     public boolean haBachechePredefinite(String username) throws SQLException {
-        String query = "SELECT COUNT(*) FROM bacheca WHERE username = ? AND titolo IN ('Bacheca1', 'Bacheca2', 'Bacheca3')"; // 🔥 Ora usa i titoli
+        String query = "SELECT COUNT(*) FROM bacheca WHERE username = ? AND titolo IN ('Università', 'Lavoro', 'Tempo Libero')";
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, username);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
-                return rs.getInt(1) > 0;  // 🔥 Se trova almeno una bacheca predefinita, restituisce TRUE
+                return rs.getInt(1) == 3;  // Devono esserci tutte e 3 le bacheche predefinite
             }
         }
         return false;
@@ -176,23 +174,9 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
 
-
-
-
-
-    public List<Bacheca> getBachecheUtente(String username) throws SQLException {
-        String query = "SELECT * FROM bacheca WHERE id_bacheca IN (1, 2, 3) " +
-                "UNION " +
-                "SELECT * FROM bacheca WHERE username = ?";
-        return executeBachecaQuery(query, username);
-    }
-
-
-
-
     @Override
     public List<Bacheca> getBachecheByUsername(String username) throws SQLException {
-        String query = "SELECT DISTINCT titolo, descrizione FROM bacheca WHERE username = ?";
+        String query = "SELECT titolo, descrizione FROM bacheca WHERE username = ?";
         List<Bacheca> bacheche = new ArrayList<>();
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
@@ -200,7 +184,10 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                Bacheca nuovaBacheca = new Bacheca(rs.getString(COL_TITOLO), rs.getString(COL_DESCRIZIONE));
+                Bacheca nuovaBacheca = new Bacheca(
+                        rs.getString(COL_TITOLO),
+                        rs.getString(COL_DESCRIZIONE)
+                );
                 bacheche.add(nuovaBacheca);
             }
         }
@@ -255,26 +242,38 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
 
     @Override
     public void creaToDo(ToDo todo, String titoloBacheca) throws SQLException {
-        String query = "INSERT INTO todo (titolo, descrizione, data_scadenza, url, stato, username, titolo_bacheca) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id_todo";
+        String getMaxOrdineQuery = "SELECT COALESCE(MAX(ordine), 0) FROM todo WHERE titolo_bacheca = ? AND username = ?";
+        String insertQuery = "INSERT INTO todo (titolo, descrizione, data_scadenza, url, stato, username, titolo_bacheca, ordine) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_todo";
 
+        int nuovoOrdine = 1;
 
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+        try (PreparedStatement getMaxStmt = connection.prepareStatement(getMaxOrdineQuery)) {
+            getMaxStmt.setString(1, titoloBacheca);
+            getMaxStmt.setString(2, todo.getAutore().getUsername());
+            ResultSet rs = getMaxStmt.executeQuery();
+            if (rs.next()) {
+                nuovoOrdine = rs.getInt(1) + 1;
+            }
+        }
+
+        try (PreparedStatement pstmt = connection.prepareStatement(insertQuery)) {
             pstmt.setString(1, todo.getTitoloToDo());
             pstmt.setString(2, todo.getDescrizioneToDo());
             pstmt.setDate(3, todo.getDataScadenza() != null ? java.sql.Date.valueOf(todo.getDataScadenza()) : null);
             pstmt.setString(4, todo.getUrl());
             pstmt.setString(5, todo.getStatoToDo().name());
-
-            String usernameAutore = (todo.getAutore() != null && todo.getAutore().getUsername() != null) ? todo.getAutore().getUsername() : "default_user";
-            pstmt.setString(6, usernameAutore);
+            pstmt.setString(6, todo.getAutore().getUsername());
             pstmt.setString(7, titoloBacheca);
+            pstmt.setInt(8, nuovoOrdine);
 
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
-                todo.setId(rs.getInt(COL_ID_TODO)); // 🔥 Usa variabile locale
+                todo.setId(rs.getInt(COL_ID_TODO));
             }
         }
     }
+
 
     @Override
     public ToDo getToDoByTitolo(String titolo) throws SQLException {
@@ -300,26 +299,44 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         return null;
     }
 
+    // In DatabaseDAO
+
+
     @Override
-    public List<ToDo> getTuttiToDo(String titoloBacheca) throws SQLException {
+    public List<ToDo> getTuttiToDo(String titoloBacheca, String username) throws SQLException {
+        String query = "SELECT t.id_todo, t.titolo, t.descrizione, t.data_scadenza, t.url, t.stato, t.username " +
+                "FROM todo t " +
+                "WHERE t.titolo_bacheca = ? AND t.username = ?";
+
         List<ToDo> listaToDo = new ArrayList<>();
-        String query = "SELECT id_todo, titolo, descrizione, data_scadenza FROM todo WHERE titolo_bacheca = ?";
-         // 🔥 Costante locale
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, titoloBacheca);
+            pstmt.setString(2, username);
+
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
                 ToDo todo = new ToDo();
-                todo.setId(rs.getInt(COL_ID_TODO));
-                todo.setTitoloToDo(rs.getString(COL_TITOLO));
-                todo.setDescrizioneToDo(rs.getString(COL_DESCRIZIONE));
+                todo.setId(rs.getInt("id_todo"));
+                todo.setTitoloToDo(rs.getString("titolo"));
+                todo.setDescrizioneToDo(rs.getString("descrizione"));
 
-                if (rs.getDate(COL_DATA_SCADENZA) != null) {
-                    todo.setDataScadenza(rs.getDate(COL_DATA_SCADENZA).toLocalDate().toString());
+                if (rs.getDate("data_scadenza") != null) {
+                    todo.setDataScadenza(rs.getDate("data_scadenza").toLocalDate().toString());
                 }
 
+                todo.setUrl(rs.getString("url"));
+                todo.setStatoToDo(StatoToDo.valueOf(rs.getString("stato")));
+
+                // Imposta l'autore del ToDo
+                String autoreUsername = rs.getString("username");
+                if (autoreUsername != null) {
+                    Utente autore = new Utente(autoreUsername, ""); // La password non è necessaria qui
+                    todo.setAutore(autore);
+                }
+
+                todo.setBacheca(titoloBacheca);
                 listaToDo.add(todo);
             }
         }
@@ -364,6 +381,41 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     @Override
+    public List<ToDo> getToDoByUsername(String username) throws SQLException {
+        List<ToDo> listaToDo = new ArrayList<>();
+        String query = "SELECT id_todo, titolo, descrizione, data_scadenza, url, stato, titolo_bacheca, username FROM todo WHERE username = ?";
+
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+
+            while (rs.next()) {
+                ToDo todo = new ToDo();
+                todo.setId(rs.getInt("id_todo"));
+                todo.setTitoloToDo(rs.getString("titolo"));
+                todo.setDescrizioneToDo(rs.getString("descrizione"));
+                if (rs.getDate("data_scadenza") != null) {
+                    todo.setDataScadenza(rs.getDate("data_scadenza").toLocalDate().toString());
+                }
+                todo.setUrl(rs.getString("url"));
+                todo.setStatoToDo(StatoToDo.valueOf(rs.getString("stato")));
+                todo.setBacheca(rs.getString("titolo_bacheca"));
+
+                // Imposta l'autore del ToDo
+                String autoreUsername = rs.getString("username");
+                if (autoreUsername != null) {
+                    Utente autore = new Utente(autoreUsername, ""); // La password non è necessaria qui
+                    todo.setAutore(autore);
+                }
+
+                listaToDo.add(todo);
+            }
+        }
+        return listaToDo;
+    }
+
+
+    @Override
     public void eliminaToDo(String titolo, String titoloBacheca) throws SQLException {
         String query = "DELETE FROM todo WHERE titolo = ? AND titolo_bacheca = ?";
 
@@ -389,5 +441,68 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public List<ToDo> getToDoInScadenza(String username, LocalDate data) throws SQLException {
+        String query = "SELECT * FROM todo WHERE username = ? AND data_scadenza = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setString(1, username);
+            pstmt.setDate(2, java.sql.Date.valueOf(data));
+            return executeToDoQuery(pstmt);
+        }
+    }
+
+    @Override
+    public List<ToDo> getToDoInScadenzaEntro(String username, LocalDate dataLimite) throws SQLException {
+        String query = "SELECT * FROM todo WHERE username = ? AND data_scadenza <= ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setString(1, username);
+            pstmt.setDate(2, java.sql.Date.valueOf(dataLimite));
+            return executeToDoQuery(pstmt);
+        }
+    }
+
+    @Override
+    public List<ToDo> cercaToDoPerTesto(String username, String testo) throws SQLException {
+        String query = "SELECT * FROM todo WHERE username = ? AND " +
+                "(LOWER(titolo) LIKE ? OR LOWER(descrizione) LIKE ?)";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setString(1, username);
+            String likePattern = "%" + testo.toLowerCase() + "%";
+            pstmt.setString(2, likePattern);
+            pstmt.setString(3, likePattern);
+            return executeToDoQuery(pstmt);
+        }
+    }
+
+    public List<ToDo> executeToDoQuery(PreparedStatement pstmt) throws SQLException {
+        List<ToDo> result = new ArrayList<>();
+        try (ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                ToDo todo = new ToDo();
+                todo.setId(rs.getInt("id_todo"));
+                todo.setTitoloToDo(rs.getString("titolo"));
+                todo.setDescrizioneToDo(rs.getString("descrizione"));
+
+                if (rs.getDate("data_scadenza") != null) {
+                    todo.setDataScadenza(rs.getDate("data_scadenza").toLocalDate().toString());
+                }
+
+                todo.setUrl(rs.getString("url"));
+                todo.setStatoToDo(StatoToDo.valueOf(rs.getString("stato")));
+                todo.setBacheca(rs.getString("titolo_bacheca"));
+
+                // Imposta l'autore
+                String username = rs.getString("username");
+                if (username != null) {
+                    Utente autore = new Utente(username, "");
+                    todo.setAutore(autore);
+                }
+
+                result.add(todo);
+            }
+        }
+        return result;
     }
 }

@@ -8,12 +8,12 @@
     <properties/>
     <border type="none"/>
     <children>
-      <component id="6d8da" class="javax.swing.JButton" binding="TRasferiscxiButton">
+      <component id="6d8da" class="javax.swing.JButton" binding="TrasferisciButton">
         <constraints>
           <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
-          <text value="TRasferiscxi"/>
+          <text value="Trasferisci"/>
         </properties>
       </component>
       <component id="597d0" class="javax.swing.JButton" binding="btnSpostaToDo">
@@ -37,7 +37,7 @@
           <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
-          <text value="Modificq"/>
+          <text value="Modifica"/>
         </properties>
       </component>
       <component id="b234c" class="javax.swing.JButton" binding="btnAggiungiToDo">
@@ -64,13 +64,15 @@
           <text value="Condivisioni"/>
         </properties>
       </component>
-      <component id="53b2" class="javax.swing.JList" binding="todoList">
+      <component id="40e3" class="javax.swing.JList" binding="todoList">
         <constraints>
           <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="6" hsize-policy="2" anchor="0" fill="3" indent="0" use-parent-layout="false">
             <preferred-size width="150" height="50"/>
           </grid>
         </constraints>
-        <properties/>
+        <properties>
+          <model/>
+        </properties>
       </component>
     </children>
   </grid>

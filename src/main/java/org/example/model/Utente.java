@@ -1,9 +1,9 @@
 package org.example.model;
 
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.stream.Collectors;
 
 public class Utente {
     private final String username;
@@ -25,10 +25,10 @@ public class Utente {
     public List<ToDo> getListaToDo(){return listaToDo; }
 
 
-    public Bacheca creaBacheca(String titolo, String descrizione) {
-        Bacheca nuova = new Bacheca(titolo, descrizione);
-        this.listaBacheche.add(nuova); // 🔥 La bacheca viene aggiunta SOLO all'utente corrente!
-        return nuova;
+    public void aggiungiBacheca(Bacheca bacheca) {
+        if (!listaBacheche.contains(bacheca)) {
+            listaBacheche.add(bacheca);
+        }
     }
 
     public static List<Bacheca> inizializzaBacheche() {
@@ -59,7 +59,13 @@ public class Utente {
     }
 
     public void eliminaBacheca(String titolo) {
-        listaBacheche.removeIf(b -> b.getTitoloBacheca().equalsIgnoreCase(titolo));
+        for (Iterator<Bacheca> iterator = listaBacheche.iterator(); iterator.hasNext();) {
+            Bacheca b = iterator.next();
+            if (b.getTitoloBacheca().equalsIgnoreCase(titolo)) {
+                iterator.remove();
+                break;
+            }
+        }
     }
 
     public ToDo creaToDo(String titolo, String descrizione,
@@ -68,7 +74,6 @@ public class Utente {
             return null;
         }
 
-        // Validazione della data di scadenza
         if (dataScadenza == null || dataScadenza.trim().isEmpty()) {
             return null;
         }
@@ -76,17 +81,18 @@ public class Utente {
         ToDo nuovoToDo = new ToDo();
         nuovoToDo.setTitoloToDo(titolo);
         nuovoToDo.setDescrizioneToDo(descrizione);
-        nuovoToDo.setDataScadenza(dataScadenza); // Il controllo si sposta nel setter
+        nuovoToDo.setDataScadenza(dataScadenza);
         nuovoToDo.setUrl(url);
         nuovoToDo.setStatoToDo(stato);
         nuovoToDo.setBacheca(titoloBacheca);
-        nuovoToDo.setAutore(this); // Imposta l'utente come autore
+        nuovoToDo.setAutore(this);
 
-        listaToDo.add(nuovoToDo); // Aggiunge alla lista dell'utente
-        // Aggiunge alla lista della Bacheca
+        listaToDo.add(nuovoToDo);
+
 
         return nuovoToDo;
     }
+
 
 
     public void modificaToDo(ToDo todo, Utente utenteRichiedente,
@@ -127,64 +133,129 @@ public class Utente {
 
 
     public void eliminaToDo(ToDo todo) {
-        if (todo == null) {
-            return;
-        }
-        if (!todo.getAutore().equals(this)) {
+        if (todo == null || !todo.getAutore().equals(this)) {
             return;
         }
 
-        // 🔹 Troviamo la bacheca giusta cercandola nella lista interna
-        String titoloBacheca = todo.getBacheca();
-        for (Bacheca bacheca : getListaBacheche()) { // 🔥 Scorriamo la lista direttamente nel Model
-            if (bacheca.getTitoloBacheca().equalsIgnoreCase(titoloBacheca)) {
-                bacheca.rimuoviToDo(todo);
-                break; // 🔥 Fermiamo il ciclo una volta trovata la bacheca giusta
-            }
+        // Rimuovi da listaToDo (che contiene tutti i ToDo personali e condivisi)
+        listaToDo.remove(todo);
+
+        // Rimuovi da eventuali utenti con cui è condiviso
+        for (Utente u : todo.getCondivisoCon()) {
+            u.rimuoviToDoCondiviso(todo);
         }
+        todo.getCondivisoCon().clear();
+
+        // "Dissocia" il ToDo dalla bacheca (opzionale)
+        todo.setBacheca(null);
     }
 
 
     public void trasferisciToDo(ToDo todo, String nomeBachecaDestinazione) {
-        if (todo == null || !todo.getAutore().equals(this)) return;
+        Objects.requireNonNull(todo, "ToDo non può essere null");
+        Objects.requireNonNull(nomeBachecaDestinazione, "Nome bacheca non può essere null");
 
-        // 🔹 Troviamo la bacheca attuale del To-Do cercando il titolo
-        String titoloBachecaCorrente = todo.getBacheca();
-        for (Bacheca b : getListaBacheche()) {
-            if (b.getTitoloBacheca().equalsIgnoreCase(titoloBachecaCorrente)) {
-                b.rimuoviToDo(todo);
-                break; // 🔥 Fermiamo il ciclo una volta trovata la bacheca giusta
-            }
+        // Verifica che la bacheca destinazione esista
+        boolean bachecaEsiste = listaBacheche.stream()
+                .anyMatch(b -> b.getTitoloBacheca().equalsIgnoreCase(nomeBachecaDestinazione));
+
+        if (!bachecaEsiste) {
+            throw new IllegalArgumentException("Bacheca destinazione non trovata");
         }
 
-        // 🔹 Troviamo la nuova bacheca e trasferiamo il To-Do
-        for (Bacheca b : getListaBacheche()) {
-            if (b.getTitoloBacheca().equalsIgnoreCase(nomeBachecaDestinazione)) {
-                b.aggiungiToDo(todo);
-                todo.setBacheca(nomeBachecaDestinazione); // 🔥 Ora assegniamo il nuovo titolo della bacheca
-                return;
-            }
-        }
-    }
-
-    public void spostaToDo(ToDo toDoDaSpostare, String titoloBacheca, int nuovaPosizione) {
-        Bacheca board = getBachecaByTitolo(titoloBacheca);
-        if (board == null) {
-            System.out.println("❌ Bacheca non trovata.");
-            return;
-        }
-
-        if (!board.getListaToDo().contains(toDoDaSpostare) || nuovaPosizione < 0 || nuovaPosizione >= board.getListaToDo().size()) {
-            System.out.println("❌ Posizione non valida.");
-            return;
-        }
-
-        // 🔹 Sposta il To-Do nella lista locale
-        board.getListaToDo().remove(toDoDaSpostare);
-        board.getListaToDo().add(nuovaPosizione, toDoDaSpostare);
+        // 🔥 Ora trasferisce il ToDo senza controllare l'autore
+        todo.setBacheca(nomeBachecaDestinazione);
     }
 
 
+
+    public void spostaToDo(String titoloBacheca, String titoloToDo, int nuovaPosizione) {
+        List<ToDo> listaFiltrata = getToDoPerBacheca(titoloBacheca);
+        ToDo toDoDaSpostare = null;
+
+        for (ToDo t : listaFiltrata) {
+            if (t.getTitoloToDo().equalsIgnoreCase(titoloToDo)) {
+                toDoDaSpostare = t;
+                break;
+            }
+        }
+
+        if (toDoDaSpostare == null) {
+            throw new IllegalArgumentException("ToDo non trovato nella bacheca specificata.");
+        }
+
+        listaFiltrata.remove(toDoDaSpostare);
+        listaFiltrata.add(Math.min(nuovaPosizione, listaFiltrata.size()), toDoDaSpostare);
+
+        for (int i = 0; i < listaFiltrata.size(); i++) {
+            listaFiltrata.get(i).setOrdine(i);
+        }
+    }
+
+    public List<ToDo> getToDoInScadenza(LocalDate data) {
+        List<ToDo> result = new ArrayList<>();
+        for (ToDo t : listaToDo) {
+            if (t.getDataScadenza() != null && t.getDataScadenza().equals(data)) {
+                result.add(t);
+            }
+        }
+        return result;
+    }
+
+    public List<ToDo> getToDoInScadenzaEntro(LocalDate dataLimite) {
+        List<ToDo> result = new ArrayList<>();
+        for (ToDo t : listaToDo) {
+            if (t.getDataScadenza() != null && !t.getDataScadenza().isAfter(dataLimite)) {
+                result.add(t);
+            }
+        }
+        return result;
+    }
+
+    public List<ToDo> cercaToDoPerTesto(String testo) {
+        List<ToDo> result = new ArrayList<>();
+        String testoLower = testo.toLowerCase();
+        for (ToDo t : listaToDo) {
+            if ((t.getTitoloToDo() != null && t.getTitoloToDo().toLowerCase().contains(testoLower)) ||
+                    (t.getDescrizioneToDo() != null && t.getDescrizioneToDo().toLowerCase().contains(testoLower))) {
+                result.add(t);
+            }
+        }
+        return result;
+    }
+
+    public List<ToDo> getToDoPerBacheca(String titoloBacheca) {
+        List<ToDo> filtrati = new ArrayList<>();
+        for (ToDo t : listaToDo) {
+            if (titoloBacheca.equalsIgnoreCase(t.getBacheca())) {
+                filtrati.add(t);
+            }
+        }
+
+        // Ordina la lista per ordine
+        Collections.sort(filtrati, new Comparator<ToDo>() {
+            @Override
+            public int compare(ToDo t1, ToDo t2) {
+                return Integer.compare(t1.getOrdine(), t2.getOrdine());
+            }
+        });
+
+        return filtrati;
+    }
+
+    public void aggiungiToDo(ToDo todo, String titoloBacheca) {
+        // Associa il ToDo alla bacheca
+        todo.setBacheca(titoloBacheca);
+
+        // Aggiungi alla lista globale dell'utente
+        if (!listaToDo.contains(todo)) {
+            listaToDo.add(todo);
+        }
+    }
+
+    public void rimuoviToDo(ToDo todo) {
+        listaToDo.remove(todo);
+    }
 
 
     public void aggiungiToDoCondiviso(ToDo todo) {
@@ -198,8 +269,11 @@ public class Utente {
     }
 
     public Bacheca getBachecaByTitolo(String titolo) {
-        for (Bacheca bacheca : getListaBacheche()) { // lista statica di tutte le bacheche
-            if (bacheca.getTitoloBacheca().equalsIgnoreCase(titolo)) {
+        if (titolo == null) return null;
+
+        for (Bacheca bacheca : listaBacheche) {
+            if (bacheca.getTitoloBacheca() != null &&
+                    bacheca.getTitoloBacheca().equalsIgnoreCase(titolo)) {
                 return bacheca;
             }
         }

@@ -4,11 +4,17 @@ package org.example.gui;
 import org.example.controller.AppController;
 import org.example.model.Bacheca;
 import org.example.model.ToDo;
+import org.example.model.Utente;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.sql.SQLException;
+import java.util.List;
 
-    public class BachecaGUI {
+public class BachecaGUI {
         private JFrame frame;
         private JFrame frameChiamante;
         private AppController controller;
@@ -46,11 +52,36 @@ import java.sql.SQLException;
         }
 
         private void configuraEventi() {
-            todoList.addListSelectionListener(e -> selezionaTodo());
-            boardList.addListSelectionListener(e -> selezionaBacheca());
-            btnIndietro.addActionListener(e -> tornaIndietro());
-            btnAggiungiCondivisione.addActionListener(e -> aggiungiCondivisione());
-            btnRimuoviCondivisione.addActionListener(e -> rimuoviCondivisione());
+            todoList.addListSelectionListener(new ListSelectionListener() {
+                @Override
+                public void valueChanged(ListSelectionEvent e) {
+                    selezionaTodo();
+                }
+            });
+            boardList.addListSelectionListener(new ListSelectionListener() {
+                @Override
+                public void valueChanged(ListSelectionEvent e) {
+                    selezionaBacheca();
+                }
+            });
+            btnIndietro.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    tornaIndietro();
+                }
+            });
+            btnAggiungiCondivisione.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    aggiungiCondivisione();
+                }
+            });
+            btnRimuoviCondivisione.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    rimuoviCondivisione();
+                }
+            });
         }
 
         private void selezionaTodo() {
@@ -62,15 +93,15 @@ import java.sql.SQLException;
             }
         }
 
-        private void selezionaBacheca() {
-            if (!boardList.getValueIsAdjusting()) {
-                String titoloSelezionato = boardList.getSelectedValue();
-                board = controller.getBachecaByTitolo(titoloSelezionato);
-                if (board != null) {
-                    aggiornaListaToDo(board);
-                }
+    private void selezionaBacheca() {
+        if (!boardList.getValueIsAdjusting()) {
+            String titoloSelezionato = boardList.getSelectedValue();
+            board = controller.getBachecaByTitolo(titoloSelezionato);
+            if (board != null) {
+                aggiornaListaToDo(board.getTitoloBacheca());
             }
         }
+    }
 
         private void tornaIndietro() {
             frameChiamante.setVisible(true);
@@ -113,13 +144,21 @@ import java.sql.SQLException;
             }
         }
 
-        private void aggiornaListaToDo(Bacheca board) {
-            if (board != null) {
-                todoList.setListData(board.getListaToDo().stream()
-                        .map(ToDo::getTitoloToDo)
-                        .toArray(String[]::new));
+    private void aggiornaListaToDo(String titoloBacheca) {
+        if (titoloBacheca != null && !titoloBacheca.isEmpty()) {
+            Utente utenteCorrente = controller.getUtenteCorrente();
+            if (utenteCorrente != null) {
+                List<ToDo> listaFiltrata = utenteCorrente.getToDoPerBacheca(titoloBacheca);
+                String[] todoTitles = new String[listaFiltrata.size()];
+                for (int i = 0; i < listaFiltrata.size(); i++) {
+                    todoTitles[i] = listaFiltrata.get(i).getTitoloToDo();
+                }
+                todoList.setListData(todoTitles);
             }
         }
+    }
+
+
 
         private void aggiornaComboBoxUtenti() {
             try {
