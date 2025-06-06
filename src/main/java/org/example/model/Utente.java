@@ -121,7 +121,7 @@ public class Utente {
 
         for (ToDo t : listaToDo) {
             if (t.getBacheca() != null &&
-                    t.getBacheca().equalsIgnoreCase(titoloBacheca) && // 🔥 Ora confrontiamo le stringhe
+                    t.getBacheca().equalsIgnoreCase(titoloBacheca) &&
                     t.getTitoloToDo() != null &&
                     t.getTitoloToDo().equalsIgnoreCase(titolo)) {
                 return t;
@@ -253,9 +253,6 @@ public class Utente {
         }
     }
 
-    public void rimuoviToDo(ToDo todo) {
-        listaToDo.remove(todo);
-    }
 
 
     public void aggiungiToDoCondiviso(ToDo todo) {

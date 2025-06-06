@@ -76,7 +76,7 @@ public class AppController {
         }
     }
 
-    private void caricaDatiUtente(String username) throws SQLException {
+    public void caricaDatiUtente(String username) throws SQLException {
         List<Bacheca> bacheche = dao.getBachecheByUsername(username);
         List<ToDo> todos = dao.getToDoByUsername(username);
 
@@ -84,7 +84,28 @@ public class AppController {
         utenteCorrente.getListaToDo().clear();
 
         for (ToDo todo : todos) {
-            if (todo.getAutore() == null) todo.setAutore(utenteCorrente);
+            // Se l'autore non è impostato o è incompleto, lo carichiamo dal database
+            if (todo.getAutore() == null || todo.getAutore().getUsername() == null) {
+                String autoreUsername = dao.getAutoreToDo(todo.getId());
+                if (autoreUsername != null) {
+                    Utente autore = dao.getUtenteByUsername(autoreUsername);
+                    todo.setAutore(autore);
+                }
+            }
+
+            // Pulisci le condivisioni esistenti prima di ricaricarle
+            todo.getCondivisoCon().clear();
+
+            // Carica le condivisioni per ogni ToDo
+            List<String> condivisioni = dao.getCondivisioniPerToDo(todo.getId());
+            for (String usernameCondiviso : condivisioni) {
+                Utente utenteCondiviso = dao.getUtenteByUsername(usernameCondiviso);
+                if (utenteCondiviso != null) {
+                    todo.aggiungiUtenteCondiviso(utenteCondiviso);
+                    utenteCondiviso.aggiungiToDoCondiviso(todo);
+                }
+            }
+
             utenteCorrente.aggiungiToDo(todo, todo.getBacheca());
         }
     }
@@ -109,6 +130,10 @@ public class AppController {
 
     public void setUtenteCorrente(Utente utente) {
         this.utenteCorrente = utente;
+    }
+
+    public Utente getUtenteByUsername(String username) throws SQLException {
+        return dao.getUtenteByUsername(username);
     }
 
 
@@ -365,18 +390,30 @@ public class AppController {
         if (todo == null || nomeUtente == null || nomeUtente.trim().isEmpty()) {
             throw new IllegalArgumentException("To-Do o nome utente non valido!");
         }
-        try {
-            Utente utenteDaAggiungere = dao.getUtenteByUsername(nomeUtente); // Recupera dal database
 
-            if (utenteDaAggiungere != null) {
-                dao.aggiungiCondivisione(todo, nomeUtente); // Passa la richiesta al DAO
+        try {
+            // Verifica che l'utente esista
+            Utente utenteDaAggiungere = dao.getUtenteByUsername(nomeUtente);
+            if (utenteDaAggiungere == null) {
+                throw new IllegalArgumentException("Utente non trovato");
             }
+
+            // Verifica che l'utente corrente sia l'autore
+            if (todo.getAutore() == null || !todo.getAutore().getUsername().equals(utenteCorrente.getUsername())) {
+                throw new IllegalStateException("Solo l'autore può condividere il To-Do");
+            }
+
+            // Aggiungi la condivisione al database
+            dao.aggiungiCondivisione(todo, nomeUtente);
+
+            // Aggiorna il model
+            todo.aggiungiUtenteCondiviso(utenteDaAggiungere);
+            utenteDaAggiungere.aggiungiToDoCondiviso(todo);
+
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Errore durante l'aggiunta della condivisione", e);
         }
     }
-
-
 
     public void rimuoviCondivisione(ToDo todo, String nomeUtente) {
         if (todo == null || nomeUtente == null || nomeUtente.trim().isEmpty()) {
@@ -384,15 +421,38 @@ public class AppController {
         }
 
         try {
-            Utente utenteDaRimuovere = dao.getUtenteByUsername(nomeUtente); //  Recupera dal database
-
-            if (utenteDaRimuovere != null) {
-                dao.rimuoviCondivisione(todo, nomeUtente); // Passa la richiesta al DAO
+            // Verifica che l'utente esista
+            Utente utenteDaRimuovere = dao.getUtenteByUsername(nomeUtente);
+            if (utenteDaRimuovere == null) {
+                throw new IllegalArgumentException("Utente non trovato");
             }
+
+            // Verifica che l'utente corrente sia l'autore OPPURE che stia rimuovendo la propria condivisione
+            boolean isAutore = todo.getAutore() != null && todo.getAutore().getUsername().equals(utenteCorrente.getUsername());
+            boolean isSelfRemoval = nomeUtente.equals(utenteCorrente.getUsername());
+            boolean isCondiviso = todo.getCondivisoCon().stream()
+                    .anyMatch(u -> u.getUsername().equals(nomeUtente));
+
+            if (!isCondiviso) {
+                throw new IllegalStateException("L'utente selezionato non ha accesso a questo To-Do");
+            }
+
+            if (!isAutore && !isSelfRemoval) {
+                throw new IllegalStateException("Non hai i permessi per rimuovere questa condivisione");
+            }
+
+            // Rimuovi la condivisione dal database
+            dao.rimuoviCondivisione(todo, nomeUtente);
+
+            // Aggiorna il model
+            todo.rimuoviUtenteCondiviso(utenteDaRimuovere);
+            utenteDaRimuovere.rimuoviToDoCondiviso(todo);
+
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Errore durante la rimozione della condivisione", e);
         }
     }
+
     public List<String> getListaUtenti() throws SQLException {
         return dao.getListaUtenti(); // 🔥 Il Controller prende i dati dal DAO
     }

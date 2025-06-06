@@ -22,9 +22,12 @@ public interface DatabaseDAO {
     public List<ToDo> getToDoInScadenzaEntro(String username, LocalDate dataLimite) throws SQLException;
     List<ToDo> cercaToDoPerTesto(String username, String testo) throws SQLException;
      List<ToDo> executeToDoQuery(PreparedStatement pstmt) throws SQLException;
+    public boolean isToDoSharedWithUser(int idToDo, String username) throws SQLException;
+    public String getAutoreToDo(int idToDo) throws SQLException;
+    public List<String> getCondivisioniPerToDo(int idToDo) throws SQLException;
 
 
-     List<Bacheca> executeBachecaQuery(String query, String username) throws SQLException;
+    List<Bacheca> executeBachecaQuery(String query, String username) throws SQLException;
     Bacheca aggiungiBacheca(String titolo, String descrizione, String username)throws SQLException;
     public void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione, String username);
     public void eliminaBacheca(String titolo, String username) throws SQLException;

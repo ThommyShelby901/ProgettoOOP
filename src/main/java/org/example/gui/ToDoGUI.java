@@ -3,6 +3,7 @@ package org.example.gui;
 import org.example.controller.AppController;
 import org.example.model.StatoToDo;
 import org.example.model.ToDo;
+import org.example.model.Utente;
 
 
 import javax.swing.*;
@@ -226,10 +227,44 @@ public class ToDoGUI {
             }
         });
 
+        btnVediCondivisioni.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                apriGestioneCondivisioniBacheca();
+            }
+        });
+
 
         frame.setVisible(true);
     System.out.println("ToDoGUI è visibile? " + frame.isVisible());
 }
+
+    private void apriGestioneCondivisioniBacheca() {
+        try {
+            // Chiudi la finestra corrente temporaneamente
+            frame.setVisible(false);
+
+            // Apri la BachecaGUI
+            BachecaGUI bachecaGUI = new BachecaGUI(controller, frame);
+
+            // Seleziona automaticamente la bacheca corrente
+            bachecaGUI.boardList.setSelectedValue(titoloBacheca, true);
+            bachecaGUI.aggiornaListaToDo(titoloBacheca);
+
+            // Quando la BachecaGUI si chiude
+            bachecaGUI.getFrame().addWindowListener(new java.awt.event.WindowAdapter() {
+                @Override
+                public void windowClosed(java.awt.event.WindowEvent windowEvent) {
+                    frame.setVisible(true);
+                    aggiornaListaToDo(titoloBacheca);
+                }
+            });
+
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(frame, "Errore: " + ex.getMessage());
+            frame.setVisible(true);
+        }
+    }
 
     public void aggiornaListaToDo(String titoloBacheca) {
         todoListModel.clear();
@@ -250,6 +285,8 @@ public class ToDoGUI {
             frame.repaint();
         }
     }
+
+
 
 
 }

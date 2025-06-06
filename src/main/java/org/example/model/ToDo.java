@@ -71,49 +71,14 @@ public class ToDo {
         return titoloBacheca;
     }
 
-    public void aggiungiCondivisione(Utente richiedente, Utente utenteDaAggiungere) {
-        if (richiedente == null || utenteDaAggiungere == null) {
-            System.out.println("Errore: parametri null non consentiti.");
-            return;
+    public void aggiungiUtenteCondiviso(Utente utente) {
+        if (utente != null && !condivisoCon.contains(utente)) {
+            condivisoCon.add(utente);
         }
-        if (!richiedente.equals(autore)) {
-            System.out.println("Errore: solo l'autore può aggiungere condivisioni.");
-            return;
-        }
-        if (autore.equals(utenteDaAggiungere)) {
-            System.out.println("Errore: non puoi condividere con te stesso.");
-            return;
-        }
-        if (condivisoCon.contains(utenteDaAggiungere)) {
-            System.out.println("Errore: utente già presente nelle condivisioni.");
-            return;
-        }
-
-        condivisoCon.add(utenteDaAggiungere);
-
-            utenteDaAggiungere.aggiungiToDoCondiviso(this);
-
     }
 
-    public void eliminaCondivisione(Utente richiedente, Utente utenteDaRimuovere) {
-        if (richiedente == null || utenteDaRimuovere == null) {
-            System.out.println("Errore: parametri null non consentiti.");
-            return;
-        }
-        if (!richiedente.equals(autore)) {
-            System.out.println("Errore: solo l'autore può eliminare condivisioni.");
-            return;
-        }
-        if (!condivisoCon.contains(utenteDaRimuovere)) {
-            System.out.println("Errore: utente non presente nelle condivisioni.");
-            return;
-        }
-
-        condivisoCon.remove(utenteDaRimuovere);
-
-            utenteDaRimuovere.rimuoviToDoCondiviso(this);
-
-        System.out.println("Condivisione rimossa con successo.");
+    public void rimuoviUtenteCondiviso(Utente utente) {
+        condivisoCon.remove(utente);
     }
 
     public boolean verificaScadenzaOggi() {

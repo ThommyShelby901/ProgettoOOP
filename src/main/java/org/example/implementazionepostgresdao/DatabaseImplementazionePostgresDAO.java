@@ -70,20 +70,18 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
 
-        // Mantieni solo operazioni CRUD sul database
-        @Override
-        public Bacheca aggiungiBacheca(String titolo, String descrizione, String username) throws SQLException {
-            String query = "INSERT INTO bacheca (titolo, descrizione, username) VALUES (?, ?, ?)";
-            try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-                pstmt.setString(1, titolo);
-                pstmt.setString(2, descrizione);
-                pstmt.setString(3, username);
-                pstmt.executeUpdate();
-                return new Bacheca(titolo, descrizione);
-            }
+    // Mantieni solo operazioni CRUD sul database
+    @Override
+    public Bacheca aggiungiBacheca(String titolo, String descrizione, String username) throws SQLException {
+        String query = "INSERT INTO bacheca (titolo, descrizione, username) VALUES (?, ?, ?)";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setString(1, titolo);
+            pstmt.setString(2, descrizione);
+            pstmt.setString(3, username);
+            pstmt.executeUpdate();
+            return new Bacheca(titolo, descrizione);
         }
-
-
+    }
 
 
     @Override
@@ -130,7 +128,6 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
 
-
     @Override
     public void salvaBachechePredefinite(List<Bacheca> bacheche, String username) throws SQLException {
         String query = "INSERT INTO bacheca (titolo, descrizione, username) VALUES (?, ?, ?) " +
@@ -146,7 +143,6 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             pstmt.executeBatch();
         }
     }
-
 
 
     @Override
@@ -235,8 +231,12 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         String query = "DELETE FROM condivisione WHERE id_todo = ? AND username = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setInt(1, todo.getId());
-            pstmt.setString(2, nomeUtente); // 🔥 Usa lo `username` per rimuovere la condivisione
-            pstmt.executeUpdate();
+            pstmt.setString(2, nomeUtente);
+            int rowsAffected = pstmt.executeUpdate();
+
+            if (rowsAffected == 0) {
+                throw new SQLException("Nessuna condivisione trovata da rimuovere");
+            }
         }
     }
 
@@ -278,7 +278,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     @Override
     public ToDo getToDoByTitolo(String titolo) throws SQLException {
         String query = "SELECT id_todo, titolo, descrizione, data_scadenza FROM todo WHERE titolo = ?";
-         // 🔥 Costante locale
+        // 🔥 Costante locale
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, titolo);
@@ -306,13 +306,15 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     public List<ToDo> getTuttiToDo(String titoloBacheca, String username) throws SQLException {
         String query = "SELECT t.id_todo, t.titolo, t.descrizione, t.data_scadenza, t.url, t.stato, t.username " +
                 "FROM todo t " +
-                "WHERE t.titolo_bacheca = ? AND t.username = ?";
+                "WHERE t.titolo_bacheca = ? AND (t.username = ? OR EXISTS " +
+                "(SELECT 1 FROM condivisione c WHERE c.id_todo = t.id_todo AND c.username = ?))";
 
         List<ToDo> listaToDo = new ArrayList<>();
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, titoloBacheca);
             pstmt.setString(2, username);
+            pstmt.setString(3, username);
 
             ResultSet rs = pstmt.executeQuery();
 
@@ -329,10 +331,10 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
                 todo.setUrl(rs.getString("url"));
                 todo.setStatoToDo(StatoToDo.valueOf(rs.getString("stato")));
 
-                // Imposta l'autore del ToDo
+                // Correzione: usa this invece di dao
                 String autoreUsername = rs.getString("username");
                 if (autoreUsername != null) {
-                    Utente autore = new Utente(autoreUsername, ""); // La password non è necessaria qui
+                    Utente autore = this.getUtenteByUsername(autoreUsername); // Chiamata diretta al metodo della classe
                     todo.setAutore(autore);
                 }
 
@@ -375,7 +377,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             pstmt.setDate(3, java.sql.Date.valueOf(todo.getDataScadenza())); // 🔥 Converte LocalDate in SQL Date
             pstmt.setInt(4, todo.getId());
             pstmt.executeUpdate();
-        }catch (SQLException e){
+        } catch (SQLException e) {
             e.printStackTrace();
         }
     }
@@ -383,10 +385,13 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     @Override
     public List<ToDo> getToDoByUsername(String username) throws SQLException {
         List<ToDo> listaToDo = new ArrayList<>();
-        String query = "SELECT id_todo, titolo, descrizione, data_scadenza, url, stato, titolo_bacheca, username FROM todo WHERE username = ?";
+        String query = "SELECT id_todo, titolo, descrizione, data_scadenza, url, stato, titolo_bacheca, username " +
+                "FROM todo WHERE username = ? OR id_todo IN " +
+                "(SELECT id_todo FROM condivisione WHERE username = ?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, username);
+            pstmt.setString(2, username);
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
@@ -401,10 +406,10 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
                 todo.setStatoToDo(StatoToDo.valueOf(rs.getString("stato")));
                 todo.setBacheca(rs.getString("titolo_bacheca"));
 
-                // Imposta l'autore del ToDo
+                // Carica sempre l'utente completo come autore
                 String autoreUsername = rs.getString("username");
                 if (autoreUsername != null) {
-                    Utente autore = new Utente(autoreUsername, ""); // La password non è necessaria qui
+                    Utente autore = getUtenteByUsername(autoreUsername);
                     todo.setAutore(autore);
                 }
 
@@ -412,6 +417,41 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             }
         }
         return listaToDo;
+    }
+
+    @Override
+    public List<String> getCondivisioniPerToDo(int idToDo) throws SQLException {
+        List<String> condivisioni = new ArrayList<>();
+        String query = "SELECT username FROM condivisione WHERE id_todo = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setInt(1, idToDo);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                condivisioni.add(rs.getString("username"));
+            }
+        }
+        return condivisioni;
+    }
+
+    @Override
+    public String getAutoreToDo(int idToDo) throws SQLException {
+        String query = "SELECT username FROM todo WHERE id_todo = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setInt(1, idToDo);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next() ? rs.getString("username") : null;
+        }
+    }
+
+    @Override
+    public boolean isToDoSharedWithUser(int idToDo, String username) throws SQLException {
+        String query = "SELECT COUNT(*) FROM condivisione WHERE id_todo = ? AND username = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setInt(1, idToDo);
+            pstmt.setString(2, username);
+            ResultSet rs = pstmt.executeQuery();
+            return rs.next() && rs.getInt(1) > 0;
+        }
     }
 
 
@@ -476,6 +516,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         }
     }
 
+    @Override
     public List<ToDo> executeToDoQuery(PreparedStatement pstmt) throws SQLException {
         List<ToDo> result = new ArrayList<>();
         try (ResultSet rs = pstmt.executeQuery()) {
@@ -493,10 +534,10 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
                 todo.setStatoToDo(StatoToDo.valueOf(rs.getString("stato")));
                 todo.setBacheca(rs.getString("titolo_bacheca"));
 
-                // Imposta l'autore
+                // Correzione: usa this invece di new Utente()
                 String username = rs.getString("username");
                 if (username != null) {
-                    Utente autore = new Utente(username, "");
+                    Utente autore = this.getUtenteByUsername(username); // Chiamata diretta al metodo della classe
                     todo.setAutore(autore);
                 }
 

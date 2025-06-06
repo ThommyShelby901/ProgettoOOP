@@ -13,14 +13,15 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class BachecaGUI {
         private JFrame frame;
         private JFrame frameChiamante;
         private AppController controller;
         private JPanel bachecaPanel;
-        private JList<String> todoList;
-        private JList<String> boardList;
+        protected JList<String> todoList;
+        protected JList<String> boardList;
         private DefaultListModel<String> boardListModel;
         private JComboBox<String> comboBoxUtenti;
         private JButton btnIndietro;
@@ -50,6 +51,8 @@ public class BachecaGUI {
             boardList.setModel(boardListModel);
             aggiornaListaBacheche();
         }
+
+
 
         private void configuraEventi() {
             todoList.addListSelectionListener(new ListSelectionListener() {
@@ -108,31 +111,71 @@ public class BachecaGUI {
             frame.dispose();
         }
 
-        private void aggiungiCondivisione() {
-            String utenteSelezionato = (String) comboBoxUtenti.getSelectedItem();
-            String titoloToDo = todoList.getSelectedValue();
+    public JFrame getFrame() {
+        return frame;
+    }
 
-            if (utenteSelezionato != null && titoloToDo != null) {
-                ToDo todo = controller.getToDoPerTitoloEBoard(titoloToDo, board.getTitoloBacheca());
+    private void aggiungiCondivisione() {
+        String utenteSelezionato = (String) comboBoxUtenti.getSelectedItem();
+        String titoloToDo = todoList.getSelectedValue();
+
+        if (utenteSelezionato == null || titoloToDo == null || board == null) {
+            JOptionPane.showMessageDialog(frame, "Errore: Seleziona un To-Do e un utente!");
+            return;
+        }
+
+        try {
+            ToDo todo = controller.getToDoPerTitoloEBoard(titoloToDo, board.getTitoloBacheca());
+            if (todo != null) {
                 controller.aggiungiCondivisione(todo, utenteSelezionato);
                 JOptionPane.showMessageDialog(frame, "To-Do condiviso con " + utenteSelezionato);
-            } else {
-                JOptionPane.showMessageDialog(frame, "Errore: Seleziona un To-Do e un utente!");
+                aggiornaListaToDo(board.getTitoloBacheca());
             }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(frame, "Errore: " + e.getMessage());
+        }
+    }
+
+    private void rimuoviCondivisione() {
+        String utenteSelezionato = (String) comboBoxUtenti.getSelectedItem();
+        String titoloToDo = todoList.getSelectedValue();
+
+        if (utenteSelezionato == null || titoloToDo == null || board == null) {
+            JOptionPane.showMessageDialog(frame, "Errore: Seleziona un To-Do e un utente!");
+            return;
         }
 
-        private void rimuoviCondivisione() {
-            String utenteSelezionato = (String) comboBoxUtenti.getSelectedItem();
-            String titoloToDo = todoList.getSelectedValue();
+        try {
+            // Estrai il titolo pulito (senza la parte delle condivisioni)
+            String titoloPulito = titoloToDo.split(" \\[Condiviso con:")[0].trim();
 
-            if (utenteSelezionato != null && titoloToDo != null) {
-                ToDo todo = controller.getToDoPerTitoloEBoard(titoloToDo, board.getTitoloBacheca());
+            ToDo todo = controller.getToDoPerTitoloEBoard(titoloPulito, board.getTitoloBacheca());
+            if (todo != null) {
                 controller.rimuoviCondivisione(todo, utenteSelezionato);
                 JOptionPane.showMessageDialog(frame, "Condivisione rimossa per " + utenteSelezionato);
+
+                // Forza un refresh completo dei dati
+                controller.caricaDatiUtente(controller.getUtenteCorrente().getUsername());
+
+                // Aggiorna la lista
+                aggiornaListaToDo(board.getTitoloBacheca());
+
+                // Seleziona nuovamente lo stesso ToDo se esiste ancora
+                for (int i = 0; i < todoList.getModel().getSize(); i++) {
+                    String current = todoList.getModel().getElementAt(i);
+                    if (current.startsWith(titoloPulito)) {
+                        todoList.setSelectedIndex(i);
+                        break;
+                    }
+                }
             } else {
-                JOptionPane.showMessageDialog(frame, "Errore: Seleziona un To-Do e un utente!");
+                JOptionPane.showMessageDialog(frame, "Errore: To-Do non trovato");
             }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(frame, "Errore: " + e.getMessage());
+            e.printStackTrace();
         }
+    }
 
         private void aggiornaListaBacheche() throws SQLException {
             boardListModel.clear();
@@ -144,14 +187,24 @@ public class BachecaGUI {
             }
         }
 
-    private void aggiornaListaToDo(String titoloBacheca) {
+    public void aggiornaListaToDo(String titoloBacheca) {
         if (titoloBacheca != null && !titoloBacheca.isEmpty()) {
             Utente utenteCorrente = controller.getUtenteCorrente();
             if (utenteCorrente != null) {
                 List<ToDo> listaFiltrata = utenteCorrente.getToDoPerBacheca(titoloBacheca);
                 String[] todoTitles = new String[listaFiltrata.size()];
                 for (int i = 0; i < listaFiltrata.size(); i++) {
-                    todoTitles[i] = listaFiltrata.get(i).getTitoloToDo();
+                    ToDo todo = listaFiltrata.get(i);
+                    // Mostra "Condiviso con:" solo se ci sono effettivamente condivisioni
+                    if (todo.getCondivisoCon() != null && !todo.getCondivisoCon().isEmpty()) {
+                        String condivisioniText = " [Condiviso con: " +
+                                todo.getCondivisoCon().stream()
+                                        .map(Utente::getUsername)
+                                        .collect(Collectors.joining(", ")) + "]";
+                        todoTitles[i] = todo.getTitoloToDo() + condivisioniText;
+                    } else {
+                        todoTitles[i] = todo.getTitoloToDo();
+                    }
                 }
                 todoList.setListData(todoTitles);
             }
@@ -170,4 +223,6 @@ public class BachecaGUI {
                 e.printStackTrace();
             }
         }
+
+
     }
