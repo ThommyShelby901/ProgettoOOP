@@ -4,15 +4,11 @@ import org.example.model.ToDo;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.sql.SQLException;
 
 public class VisualizzaToDoDialog {
-    private JDialog dialog;
-    private ToDo todo;
+    private final  JDialog dialog;
+    private final ToDo todo;
 
     // Componenti gestiti nella form
     private JPanel pnlDettagliToDo;
@@ -68,7 +64,7 @@ public class VisualizzaToDoDialog {
                 lblImmagine.setIcon(new ImageIcon(img));
             } catch (Exception e) {
                 lblImmagine.setIcon(null);
-                System.err.println("Errore caricamento immagine: " + e.getMessage());
+                JOptionPane.showMessageDialog(dialog, "Errore nel caricamento dell'immagine: " + e.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
             }
         } else {
             lblImmagine.setIcon(null);

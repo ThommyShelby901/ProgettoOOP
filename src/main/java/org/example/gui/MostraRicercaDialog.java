@@ -4,7 +4,6 @@ import org.example.controller.AppController;
 import org.example.model.ToDo;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
@@ -12,10 +11,12 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class MostraRicercaDialog {
-    private JDialog dialog;
-    private AppController controller;
+    private final JDialog dialog;
+    private final AppController controller;
+    private static final String MESSAGGIO_ERRORE = "Errore";
 
-    // 🔥 Componenti UI definiti nel form grafico (GUI Builder)
+
+    //  Componenti UI definiti nel form grafico (GUI Builder)
     private JPanel pnlRicerca;
     private JTextField txtTitolo;
     private JTextField txtData;
@@ -23,10 +24,10 @@ public class MostraRicercaDialog {
     private JButton btnCercaData;
     private JButton btnScadenzeOggi;
     private JList<String> lstRisultati;
-    private DefaultListModel<String> modelRisultati;
-    private JScrollPane scrollPane;
-    private JLabel lblTitolo;
-    private JLabel lblData;
+    private final DefaultListModel<String> modelRisultati;
+    JScrollPane scrollPane;
+    JLabel lblTitolo;
+    JLabel lblData;
 
     public MostraRicercaDialog(AppController controller, JFrame parent) {
         this.controller = controller;
@@ -68,14 +69,14 @@ public class MostraRicercaDialog {
     private void cercaPerTitolo() {
         String titolo = txtTitolo.getText().trim();
         if (titolo.isEmpty()) {
-            JOptionPane.showMessageDialog(dialog, "Inserisci un titolo", "Errore", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(dialog, "Inserisci un titolo", MESSAGGIO_ERRORE, JOptionPane.WARNING_MESSAGE);
             return;
         }
         try {
             List<ToDo> risultati = controller.cercaToDoPerTitolo(titolo);
             aggiornaListaRisultati(risultati);
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(dialog, "Errore durante la ricerca: " + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception _) {
+            JOptionPane.showMessageDialog(dialog, "Formato data non valido (AAAA-MM-GG)", MESSAGGIO_ERRORE, JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -84,9 +85,10 @@ public class MostraRicercaDialog {
             LocalDate data = LocalDate.parse(txtData.getText().trim());
             List<ToDo> risultati = controller.getToDoInScadenzaEntro(data);
             aggiornaListaRisultati(risultati);
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(dialog, "Formato data non valido (AAAA-MM-GG)", "Errore", JOptionPane.ERROR_MESSAGE);
+        } catch (Exception _) {
+            JOptionPane.showMessageDialog(dialog, "Formato data non valido (AAAA-MM-GG)", MESSAGGIO_ERRORE, JOptionPane.ERROR_MESSAGE);
         }
+
     }
 
     private void mostraScadenzeOggi() {
@@ -94,7 +96,7 @@ public class MostraRicercaDialog {
             List<ToDo> risultati = controller.getToDoInScadenzaOggi();
             aggiornaListaRisultati(risultati);
         } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(dialog, "Errore durante la ricerca: " + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(dialog, "Errore durante la ricerca: " + ex.getMessage(), MESSAGGIO_ERRORE, JOptionPane.ERROR_MESSAGE);
         }
     }
 

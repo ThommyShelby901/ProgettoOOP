@@ -1,23 +1,19 @@
 package org.example.gui;
 
 import org.example.controller.AppController;
-import org.example.dao.DatabaseDAO;
-import org.example.implementazionepostgresdao.DatabaseImplementazionePostgresDAO;
 import org.example.model.Bacheca;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
-import java.util.List;
 
 
 public class HomeFrame {
-    private JFrame frame;
-    private AppController controller;
+    private final JFrame frame;
+    private final AppController controller;
 
-    // Componenti già disegnati nella form
+    JScrollPane scrollPaneBoardList;
     private JPanel homePanel;
     private JList<String> boardList;
     private DefaultListModel<String> boardListModel;
@@ -26,72 +22,44 @@ public class HomeFrame {
     private JButton btnModificaBacheca;
     private JButton btnEliminaBacheca;
     private JButton visualizzaButton;
-    private JScrollPane scrollPaneBoardList;
     private JButton btnCercaToDo;
 
     public HomeFrame(AppController controller, JFrame frameChiamante) {
         this.controller = controller;
         this.frame = frameChiamante;
 
-
-        frame.setContentPane(homePanel); // 🔥 Usa il pannello disegnato nella form
-        frame.setSize(800, 600);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLocationRelativeTo(null);
-
-        boardListModel = new DefaultListModel<>();
-        boardList.setModel(boardListModel);
+        configuraFinestra();
+        configuraListener(); //  I listener sono spostati in un metodo separato
         aggiornaListaBacheche();
-
-
-        btnCercaToDo.setToolTipText("Cerca ToDo per testo o scadenza");// 🔹 Aggiorna la lista delle bacheche
-
-        configuraEventi(); // 🔥 Collegamento degli eventi ai pulsanti
 
         frame.setVisible(true);
     }
 
-    private void configuraEventi() {
+    private void configuraFinestra() {
+        frame.setContentPane(homePanel);
+        frame.setSize(800, 600);
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        frame.setLocationRelativeTo(null);
+
+        boardListModel = new DefaultListModel<>();
+        boardList.setModel(boardListModel);
+    }
+
+    private void configuraListener() {
         logoutButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                int conferma = JOptionPane.showConfirmDialog(
-                        frame,
-                        "Sei sicuro di voler uscire?",
-                        "Logout",
-                        JOptionPane.YES_NO_OPTION
-                );
-
-                if (conferma == JOptionPane.YES_OPTION) {
-                    // 🔥 Resetta l'utente corrente nel controller
-                    controller.setUtenteCorrente(null);
-
-                    // 🔹 Chiudi la HomeFrame
-                    frame.dispose();
-
-                    // 🔥 Riapri il LoginFrame con un nuovo Controller
-                    try {
-                        DatabaseDAO dao = new DatabaseImplementazionePostgresDAO();
-                        LoginFrame loginFrame = new LoginFrame();
-                        AppController newController = new AppController(dao, loginFrame);
-                        loginFrame.setController(newController);
-                    } catch (SQLException e1) {
-                        e1.printStackTrace();
-                    }
-                }
+                gestisciLogout();
             }
         });
-
 
         btnCreaBacheca.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String titolo = JOptionPane.showInputDialog(frame, "Inserisci il titolo della nuova bacheca:");
-                String descrizione = JOptionPane.showInputDialog(frame, "Inserisci la descrizione della nuova bacheca:");
-
-                if (titolo != null && !titolo.trim().isEmpty() && descrizione != null && !descrizione.trim().isEmpty()) {
-                    controller.creaBacheca(titolo.trim(), descrizione.trim()); // 🔥 Chiamata diretta al Controller
-                    aggiornaListaBacheche(); // 🔹 La View si aggiorna dopo la modifica
+                try {
+                    creaBacheca();
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
                 }
             }
         });
@@ -99,15 +67,10 @@ public class HomeFrame {
         btnModificaBacheca.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String selezionata = boardList.getSelectedValue();
-                if (selezionata != null) {
-                    String nuovoTitolo = JOptionPane.showInputDialog(frame, "Modifica il titolo della bacheca:");
-                    String nuovaDescrizione = JOptionPane.showInputDialog(frame, "Modifica la descrizione della bacheca:");
-
-                    if (nuovoTitolo != null && nuovaDescrizione != null && !nuovoTitolo.trim().isEmpty()) {
-                        controller.modificaBacheca(selezionata, nuovoTitolo.trim(), nuovaDescrizione.trim()); // 🔥 Chiamata al Controller
-                        aggiornaListaBacheche();
-                    }
+                try {
+                    modificaBacheca();
+                } catch (SQLException ex) {
+                    throw new RuntimeException(ex);
                 }
             }
         });
@@ -115,74 +78,113 @@ public class HomeFrame {
         btnEliminaBacheca.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String selezionata = boardList.getSelectedValue();
-                if (selezionata != null) {
-                    try {
-                        controller.eliminaBacheca(selezionata); // 🔥 Il Controller gestisce la logica
-                    } catch (SQLException ex) {
-                        throw new RuntimeException(ex);
-                    }
-                    aggiornaListaBacheche();
-                }
+                eliminaBacheca();
             }
         });
 
         visualizzaButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String selezionata = boardList.getSelectedValue();
-                if (selezionata != null) {
-                    new ToDoGUI(controller, frame, selezionata); // 🔥 Apri direttamente la GUI
-                    frame.setVisible(false); // Nascondi la finestra principale
-                } else {
-                    JOptionPane.showMessageDialog(frame, "❌ Seleziona una bacheca da visualizzare!");
-                }
+                visualizzaBacheca();
             }
         });
 
         btnCercaToDo.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // 🔹 Verifica se l'utente è loggato
-                if (controller.getUtenteCorrente() == null) {
-                    JOptionPane.showMessageDialog(frame, "Devi essere loggato per effettuare ricerche",
-                            "Errore", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-                // 🔥 Nasconde la finestra principale per aprire la ricerca
-                frame.setVisible(false);
-                try {
-                    MostraRicercaDialog dialog = new MostraRicercaDialog(controller, frame);
-                    dialog.mostra(); // ✅ Questo chiama il metodo che imposta setVisible(true) su JDialog interno
-
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(frame, "Errore durante l'apertura della ricerca: " + ex.getMessage(),
-                            "Errore", JOptionPane.ERROR_MESSAGE);
-                    ex.printStackTrace();
-                }
-                frame.setVisible(true); // 🔹 Ripristina la visibilità della finestra principale
+                cercaToDo();
             }
         });
+    }
 
+    private void gestisciLogout() {
+        int conferma = JOptionPane.showConfirmDialog(frame, "Sei sicuro di voler uscire?", "Logout", JOptionPane.YES_NO_OPTION);
+        if (conferma == JOptionPane.YES_OPTION) {
+            controller.handleLogout(); // Chiama il controller per gestire il logout
+            frame.dispose(); // Chiude la HomeFrame corrente
+        }
+    }
+
+
+    private void creaBacheca() throws SQLException {
+        String titolo = JOptionPane.showInputDialog(frame, "Inserisci il titolo della nuova bacheca:");
+        String descrizione = JOptionPane.showInputDialog(frame, "Inserisci la descrizione della nuova bacheca:");
+
+        if (titolo != null && !titolo.trim().isEmpty() && descrizione != null && !descrizione.trim().isEmpty()) {
+            controller.creaBacheca(titolo.trim(), descrizione.trim());
+            aggiornaListaBacheche();
+        }
+    }
+
+    private void modificaBacheca() throws SQLException {
+        String selezionata = boardList.getSelectedValue();
+        if (selezionata != null) {
+            String nuovoTitolo = JOptionPane.showInputDialog(frame, "Modifica il titolo della bacheca:");
+            String nuovaDescrizione = JOptionPane.showInputDialog(frame, "Modifica la descrizione della bacheca:");
+
+            if (nuovoTitolo != null && nuovaDescrizione != null && !nuovoTitolo.trim().isEmpty()) {
+                controller.modificaBacheca(selezionata, nuovoTitolo.trim(), nuovaDescrizione.trim());
+                aggiornaListaBacheche();
+            }
+        }
+    }
+
+    private void eliminaBacheca() {
+        String selezionata = boardList.getSelectedValue();
+        if (selezionata != null) {
+            try {
+                controller.eliminaBacheca(selezionata);
+                aggiornaListaBacheche();
+            } catch (SQLException ex) {
+                JOptionPane.showMessageDialog(frame, "Errore durante l'eliminazione: " + ex.getMessage());
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    private void visualizzaBacheca() {
+        String selezionata = boardList.getSelectedValue();
+        if (selezionata != null) {
+            new ToDoGUI(controller, frame, selezionata);
+            frame.setVisible(false);
+        } else {
+            JOptionPane.showMessageDialog(frame, "Seleziona una bacheca da visualizzare!");
+        }
+    }
+
+    private void cercaToDo() {
+        if (controller.getUtenteCorrente() == null) {
+            JOptionPane.showMessageDialog(frame, "Devi essere loggato per effettuare ricerche", "Errore", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        frame.setVisible(false);
+        try {
+            MostraRicercaDialog dialog = new MostraRicercaDialog(controller, frame);
+            dialog.mostra();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(frame, "Errore durante la ricerca: " + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
+        frame.setVisible(true);
     }
 
     public void aggiornaListaBacheche() {
         boardListModel.clear();
         try {
-            String username = controller.getUtenteCorrente().getUsername();
-            System.out.println("Utente corrente: " + username); // Debug
-            controller.inizializzaBachecheUtente(username);
-            List<Bacheca> bacheche = controller.getListaBachecheAggiornate();
-            System.out.println("Bacheche recuperate per " + username + ": " + bacheche);
-            for (Bacheca board : bacheche) {
+            for (Bacheca board : controller.getListaBachecheAggiornate()) {
                 boardListModel.addElement(board.getTitoloBacheca());
             }
         } catch (SQLException ex) {
-            ex.printStackTrace();
-            JOptionPane.showMessageDialog(frame, "❌ Errore nel recupero delle bacheche dal database!");
+            JOptionPane.showMessageDialog(frame, "Errore nel recupero delle bacheche dal database!");
         }
     }
 
+    public void getAggiornaListaBacheche() {
+        aggiornaListaBacheche();
+    }
 
+    public JFrame getFrame() {
+        return frame;
+    }
 }

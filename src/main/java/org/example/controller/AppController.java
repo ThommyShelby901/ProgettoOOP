@@ -3,273 +3,138 @@ package org.example.controller;
 import org.example.dao.DatabaseDAO;
 import org.example.gui.HomeFrame;
 import org.example.gui.LoginFrame;
-import org.example.model.Bacheca;
-import org.example.model.StatoToDo;
-import org.example.model.ToDo;
-import org.example.model.Utente;
-
+import org.example.model.*;
 import java.awt.*;
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class AppController {
-    private final LoginFrame loginFrame;
+    // Componenti BCE
+    private final DatabaseDAO dao;
+    private LoginFrame loginFrame;
     private HomeFrame homeFrame;
     private Utente utenteCorrente;
-    private DatabaseDAO dao;
 
     public AppController(DatabaseDAO dao, LoginFrame loginFrame) {
-        this.loginFrame = loginFrame;
         this.dao = dao;
+        this.loginFrame = loginFrame;
     }
 
-    public void handleLogin(String username, String password) {
-        if (username == null || username.trim().isEmpty() ||
-                password == null || password.trim().isEmpty()) {
-            loginFrame.showMessage("Errore: Username e password obbligatori");
-            return;
-        }
-
+    // ==================== GESTIONE AUTENTICAZIONE ====================
+    public void login(String username, String password) {
         try {
+            validaCredenziali(username, password);
             autenticaUtente(username, password);
-            caricaDatiUtente(username);
-            inizializzaBachecheUtente(username);
-            apriHomeFrame();
-        } catch (SQLException e) {
-            loginFrame.showMessage("Errore database: " + e.getMessage());
-        } catch (Exception e) {
+            caricaDatiUtente();
+            inizializzaBachechePredefinite();
+            avviaHomeFrame();
+        } catch (IllegalArgumentException | SQLException e) {
             loginFrame.showMessage(e.getMessage());
+        } catch (Exception _) {
+            loginFrame.showMessage("Credenziali non valide");
         }
     }
 
-    public void handleRegistration(String username, String password) {
+    public void registrazione(String username, String password) {
         try {
+            validaCredenziali(username, password);
             if (dao.utenteEsiste(username)) {
-                loginFrame.showMessage("Username già esistente");
-                return;
+                throw new IllegalArgumentException("Username già esistente");
             }
-
-            Utente nuovoUtente = new Utente(username, password);
-            dao.salvaUtente(nuovoUtente);
+            dao.salvaUtente(new Utente(username, password));
             loginFrame.showMessage("Registrazione completata!");
-
         } catch (SQLException e) {
             loginFrame.showMessage("Errore database: " + e.getMessage());
         }
     }
 
-    private void autenticaUtente(String username, String password)
-            throws Exception {
-        utenteCorrente = dao.getUtenteByUsername(username);
+    public void handleLogout() {
+        utenteCorrente = null;
+        if (homeFrame != null) homeFrame.getFrame().dispose();
+        if (loginFrame != null) loginFrame.chiudiFinestra();
+        loginFrame = new LoginFrame();
+        loginFrame.setController(this);
+    }
 
-        if (utenteCorrente == null || !utenteCorrente.getPassword().equals(password)) {
-            throw new Exception("Credenziali non valide");
+    // ==================== GESTIONE BACHECHE ====================
+    public List<Bacheca> getListaBacheche() throws SQLException {
+        return dao.getListaBachecheDalDB(utenteCorrente.getUsername());
+    }
+
+    public void creaBacheca(String titolo, String descrizione) throws SQLException {
+        if (titolo == null || titolo.trim().isEmpty() || descrizione == null || descrizione.trim().isEmpty()) {
+            throw new IllegalArgumentException("Titolo e descrizione obbligatori");
         }
-    }
-
-    public void caricaDatiUtente(String username) throws SQLException {
-        List<Bacheca> bacheche = dao.getBachecheByUsername(username);
-        List<ToDo> todos = dao.getToDoByUsername(username);
-
-        utenteCorrente.setListaBacheche(bacheche);
-        utenteCorrente.getListaToDo().clear();
-
-        for (ToDo todo : todos) {
-            // Se l'autore non è impostato o è incompleto, lo carichiamo dal database
-            if (todo.getAutore() == null || todo.getAutore().getUsername() == null) {
-                String autoreUsername = dao.getAutoreToDo(todo.getId());
-                if (autoreUsername != null) {
-                    Utente autore = dao.getUtenteByUsername(autoreUsername);
-                    todo.setAutore(autore);
-                }
-            }
-
-            // Pulisci le condivisioni esistenti prima di ricaricarle
-            todo.getCondivisoCon().clear();
-
-            // Carica le condivisioni per ogni ToDo
-            List<String> condivisioni = dao.getCondivisioniPerToDo(todo.getId());
-            for (String usernameCondiviso : condivisioni) {
-                Utente utenteCondiviso = dao.getUtenteByUsername(usernameCondiviso);
-                if (utenteCondiviso != null) {
-                    todo.aggiungiUtenteCondiviso(utenteCondiviso);
-                    utenteCondiviso.aggiungiToDoCondiviso(todo);
-                }
-            }
-
-            utenteCorrente.aggiungiToDo(todo, todo.getBacheca());
-        }
-    }
-
-    public void inizializzaBachecheUtente(String username) throws SQLException {
-        if (!dao.haBachechePredefinite(username)) {
-            List<Bacheca> bacheche = Utente.inizializzaBacheche();
-            dao.salvaBachechePredefinite(bacheche, username);
-        }
-    }
-
-    private void apriHomeFrame() {
-        loginFrame.chiudiFinestra();
-        homeFrame = new HomeFrame(this, loginFrame.getFrame());
-    }
-
-    public Utente getUtenteCorrente() {
-        return utenteCorrente;
-    }
-
-
-
-    public void setUtenteCorrente(Utente utente) {
-        this.utenteCorrente = utente;
-    }
-
-    public Utente getUtenteByUsername(String username) throws SQLException {
-        return dao.getUtenteByUsername(username);
-    }
-
-
-    // ---------------------- GESTIONE BACHECHE ----------------------
-
-    public List<Bacheca> getListaBachecheAggiornate() throws SQLException {
-        return dao.getListaBachecheDalDB(utenteCorrente.getUsername()); // 🔥 Ottieni le bacheche aggiornate!
-    }
-
-    public Bacheca getBachecaByTitolo(String titolo) {
-        return utenteCorrente.getBachecaByTitolo(titolo);
-    }
-
-    public void creaBacheca(String titolo, String descrizione) {
-        // Validazione input
-        if (titolo == null || titolo.trim().isEmpty() ||
-                descrizione == null || descrizione.trim().isEmpty()) {
-            return;
-        }
-
-        try {
-            // Delegare al DAO
-            Bacheca bachecaSalvata = dao.aggiungiBacheca(titolo, descrizione, utenteCorrente.getUsername());
-
-            // Aggiornare il Model
-            if (bachecaSalvata != null) {
-                utenteCorrente.aggiungiBacheca(bachecaSalvata);
-                homeFrame.aggiornaListaBacheche(); // Notifica la View
-            }
-        } catch (SQLException e) {
-            // Gestione errori
-        }
+        Bacheca bacheca = dao.aggiungiBacheca(titolo, descrizione, utenteCorrente.getUsername());
+        utenteCorrente.aggiungiBacheca(bacheca);
+        homeFrame.aggiornaListaBacheche();
     }
 
     public void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione) {
-        if (titoloCorrente == null || titoloCorrente.trim().isEmpty() ||
-                nuovoTitolo == null || nuovoTitolo.trim().isEmpty() ||
-                nuovaDescrizione == null || nuovaDescrizione.trim().isEmpty()) {
-            return;
-        }
-
+        validaInputBacheca(titoloCorrente, nuovoTitolo, nuovaDescrizione);
         utenteCorrente.modificaBacheca(titoloCorrente, nuovoTitolo, nuovaDescrizione);
         dao.modificaBacheca(titoloCorrente, nuovoTitolo, nuovaDescrizione, utenteCorrente.getUsername());
     }
 
     public void eliminaBacheca(String titolo) throws SQLException {
         if (titolo == null || titolo.trim().isEmpty()) {
-            return;
+            throw new IllegalArgumentException("Titolo obbligatorio");
         }
-
         utenteCorrente.eliminaBacheca(titolo);
         dao.eliminaBacheca(titolo, utenteCorrente.getUsername());
     }
 
-    // ---------------------- GESTIONE TO-DO ----------------------
-
-    public List<ToDo> getTuttiToDo(String titoloBacheca) throws SQLException {
-        if (titoloBacheca == null || titoloBacheca.isEmpty() || utenteCorrente == null) {
-            return new ArrayList<>();
+    // ==================== GESTIONE TO-DO ====================
+    public List<ToDo> getToDoPerBacheca(String titoloBacheca) throws SQLException {
+        if (titoloBacheca == null || titoloBacheca.isEmpty()) {
+            return Collections.emptyList();
         }
         return dao.getTuttiToDo(titoloBacheca, utenteCorrente.getUsername());
     }
 
-    public ToDo getToDoPerTitoloEBoard(String titolo, String titoloB) {
-        if (titolo == null || titoloB == null || utenteCorrente == null) {
-            return null;
-        }
-
-        ToDo todo = utenteCorrente.cercaToDoPerTitoloEBoard(titolo, titoloB);
+    public void creaToDo(String titolo, String descrizione, String dataScadenza,
+                         String url, StatoToDo stato, String titoloBacheca, Color colore) throws SQLException {
+        validaInputToDo(titolo, descrizione, titoloBacheca);
+        ToDo todo = utenteCorrente.creaToDo(titolo, descrizione, dataScadenza, url, stato, titoloBacheca, colore);
         if (todo != null) {
-            return todo;
-        }
-
-        try {
-            return dao.getToDoByTitolo(titolo);
-        } catch (SQLException e) {
-            e.printStackTrace();
-            return null;
+            todo.setAutore(utenteCorrente);
+            dao.creaToDo(todo, titoloBacheca);
         }
     }
 
-    public void creaToDo(String titolo, String descrizione,
-                         String dataScadenza, String url, StatoToDo stato, String titoloBacheca, Color coloreSfondo) throws SQLException {
-        ToDo nuovoToDo = utenteCorrente.creaToDo(titolo, descrizione, dataScadenza, url, stato, titoloBacheca, coloreSfondo);
+    // Modifica nel metodo modificaToDo
+    public void modificaToDo(ToDo todo, String nuovoTitolo, String nuovaDescrizione,
+                             String nuovaDataScadenza, String nuovoUrl, StatoToDo nuovoStato) throws SQLException {
+        if (todo == null) throw new IllegalArgumentException("ToDo non può essere null");
 
-        // Assicurati che l'autore sia impostato
-        if (nuovoToDo != null) {
-            nuovoToDo.setAutore(utenteCorrente);// Imposta esplicitamente l'autore
-            nuovoToDo.setColoreSfondo(coloreSfondo);
-            dao.creaToDo(nuovoToDo, titoloBacheca);
-        }
-    }
-
-
-    public void modificaToDo(ToDo todo, Utente utenteRichiedente,
-                             String nuovoTitolo, String nuovaDescrizione,
-                             String nuovaDataScadenza, String nuovoUrl,
-                             StatoToDo nuovoStato) throws SQLException {
-        if (todo == null || utenteRichiedente == null) {
-            return;
-        }
-
-        // Modifica il modello
-        utenteRichiedente.modificaToDo(todo, utenteRichiedente, nuovoTitolo, nuovaDescrizione,
-                nuovaDataScadenza, nuovoUrl, nuovoStato);
-
-        // Aggiorna il database
+        // Rimossa la richiesta dell'utente come parametro
+        utenteCorrente.modificaToDo(todo, nuovoTitolo, nuovaDescrizione, nuovaDataScadenza, nuovoUrl, nuovoStato);
         dao.aggiornaToDo(todo);
-
-        // Ricarica i dati per assicurarsi la sincronizzazione
-        caricaDatiUtente(utenteCorrente.getUsername());
+        caricaDatiUtente();
     }
-
 
     public void eliminaToDo(String titoloToDo, String titoloBacheca) throws SQLException {
         if (titoloToDo == null || titoloBacheca == null) {
-            return;
+            throw new IllegalArgumentException("Titolo e bacheca obbligatori");
         }
 
-        // Trova il ToDo nella listaToDo dell'utente filtrando per titolo e bacheca
-        ToDo todoDaEliminare = null;
-        for (ToDo todo : utenteCorrente.getListaToDo()) {
-            if (todo.getTitoloToDo().equalsIgnoreCase(titoloToDo) &&
-                    todo.getBacheca() != null &&
-                    todo.getBacheca().equalsIgnoreCase(titoloBacheca)) {
-                todoDaEliminare = todo;
-                break;
-            }
+        ToDo todo = utenteCorrente.cercaToDoPerTitoloEBoard(titoloToDo, titoloBacheca);
+        if (todo != null) {
+            utenteCorrente.eliminaToDo(todo);
+            dao.eliminaToDo(titoloToDo, titoloBacheca);
         }
-
-        if (todoDaEliminare == null) {
-            return;
-        }
-
-        // Rimuove il ToDo dall'utente (e quindi dalla sua lista globale)
-        utenteCorrente.eliminaToDo(todoDaEliminare);
-
-        // Rimuove dal database tramite DAO
-        dao.eliminaToDo(titoloToDo, titoloBacheca);
     }
 
+    public void spostaToDo(String titoloBacheca, String titoloToDo, int nuovaPosizione) throws SQLException {
+        utenteCorrente.spostaToDo(titoloBacheca, titoloToDo, nuovaPosizione);
+        List<ToDo> todos = utenteCorrente.getToDoPerBacheca(titoloBacheca);
+        for (int i = 0; i < todos.size(); i++) {
+            dao.aggiornaOrdineToDo(todos.get(i).getId(), i);
+        }
+    }
 
     public void trasferisciToDo(ToDo todo, String nomeBachecaDestinazione) throws SQLException {
         if (todo == null || nomeBachecaDestinazione == null || utenteCorrente == null) {
@@ -282,50 +147,11 @@ public class AppController {
             throw new IllegalArgumentException("Bacheca destinazione non trovata");
         }
 
-        // 🔥 Chiama il metodo nel model SENZA controllo dell'autore
+        //  Chiama il metodo nel model SENZA controllo dell'autore
         utenteCorrente.trasferisciToDo(todo, nomeBachecaDestinazione);
 
         // Aggiorna il database
         dao.trasferisciToDo(todo, nomeBachecaDestinazione);
-    }
-
-
-
-    public void spostaToDo(String titoloBacheca, String titoloDaSpostare, int nuovaPosizione) throws SQLException {
-        final String titoloBachecaPulito = titoloBacheca.trim();
-        final String titoloDaSpostarePulito = titoloDaSpostare.trim();
-
-        System.out.println(" ToDo nella bacheca '" + titoloBachecaPulito + "':");
-        for (ToDo t : utenteCorrente.getListaToDo()) {
-            if (t.getBacheca().trim().equalsIgnoreCase(titoloBachecaPulito)) {
-                System.out.println("   - '" + t.getTitoloToDo() + "'");
-            }
-        }
-
-        // Sposto il ToDo nella lista globale dell'utente (in memoria)
-        utenteCorrente.spostaToDo(titoloBachecaPulito, titoloDaSpostarePulito, nuovaPosizione);
-
-        // Recupero la lista aggiornata dei ToDo filtrata per la bacheca
-        List<ToDo> listaFiltrata = new ArrayList<>();
-        for (ToDo t : utenteCorrente.getListaToDo()) {
-            if (t.getBacheca().trim().equalsIgnoreCase(titoloBachecaPulito)) {
-                listaFiltrata.add(t);
-            }
-        }
-
-        // Ordina la lista per ordine
-        Collections.sort(listaFiltrata, new Comparator<ToDo>() {
-            @Override
-            public int compare(ToDo t1, ToDo t2) {
-                return Integer.compare(t1.getOrdine(), t2.getOrdine());
-            }
-        });
-
-        for (int i = 0; i < listaFiltrata.size(); i++) {
-            ToDo todo = listaFiltrata.get(i);
-            todo.setOrdine(i);
-            dao.aggiornaOrdineToDo(todo.getId(), i);
-        }
     }
 
     public void aggiungiImmagineAToDo(ToDo todo, String percorsoImmagine) throws SQLException {
@@ -358,7 +184,11 @@ public class AppController {
         dao.aggiornaToDo(todo);
     }
 
-
+    public List<ToDo> cercaToDoPerTitolo(String titolo) {
+        return utenteCorrente.getListaToDo().stream()
+                .filter(todo -> todo.getTitoloToDo().contains(titolo))
+                .collect(Collectors.toList());
+    }
 
     public List<ToDo> getToDoInScadenzaEntro(LocalDate dataLimite) throws SQLException {
         List<ToDo> result = utenteCorrente.getToDoInScadenzaEntro(dataLimite);
@@ -385,110 +215,122 @@ public class AppController {
     }
 
 
+    // ==================== GESTIONE CONDIVISIONI ====================
+    public void aggiungiCondivisione(ToDo todo, String username) throws SQLException {
+        validaCondivisione(todo, username);
+        Utente destinatario = dao.getUtenteByUsername(username);
 
-    public List<ToDo> cercaToDoPerTitolo(String titolo) throws SQLException {
-        List<ToDo> result = utenteCorrente.cercaToDoPerTitolo(titolo);
-        if (result.isEmpty()) {
-            result = dao.cercaToDoPerTitolo(utenteCorrente.getUsername(), titolo);
-            for (ToDo t : result) {
-                utenteCorrente.aggiungiToDo(t, t.getBacheca());
-            }
-        }
-        return result;
+        dao.aggiungiCondivisione(todo, username);
+        todo.aggiungiUtenteCondiviso(destinatario);
+        destinatario.aggiungiToDoCondiviso(todo);
     }
 
-    public void aggiornaToDo(ToDo todo) throws SQLException {
-        if (todo == null) {
-            throw new IllegalArgumentException("ToDo non può essere null");
-        }
-        dao.aggiornaToDo(todo);
+    public void rimuoviCondivisione(ToDo todo, String username) throws SQLException {
+        validaCondivisione(todo, username);
+        Utente destinatario = dao.getUtenteByUsername(username);
+
+        dao.rimuoviCondivisione(todo, username);
+        todo.rimuoviUtenteCondiviso(destinatario);
+        destinatario.rimuoviToDoCondiviso(todo);
     }
 
-
-    // ---------------------- GESTIONE CONDIVISIONI ----------------------
-
-    public void aggiungiCondivisione(ToDo todo, String nomeUtente) {
-        if (todo == null || nomeUtente == null || nomeUtente.trim().isEmpty()) {
-            throw new IllegalArgumentException("To-Do o nome utente non valido!");
-        }
-
-        try {
-            // Verifica che l'utente esista
-            Utente utenteDaAggiungere = dao.getUtenteByUsername(nomeUtente);
-            if (utenteDaAggiungere == null) {
-                throw new IllegalArgumentException("Utente non trovato");
-            }
-
-            // Verifica che l'utente corrente sia l'autore
-            if (todo.getAutore() == null || !todo.getAutore().getUsername().equals(utenteCorrente.getUsername())) {
-                throw new IllegalStateException("Solo l'autore può condividere il To-Do");
-            }
-
-            // Verifica che l'utente abbia la stessa bacheca
-            boolean haBacheca = false;
-            for (Bacheca b : utenteDaAggiungere.getListaBacheche()) {
-                if (b.getTitoloBacheca().equalsIgnoreCase(todo.getBacheca())) {
-                    haBacheca = true;
-                    break;
-                }
-            }
-
-            if (!haBacheca) {
-                throw new IllegalStateException("L'utente con cui vuoi condividere non ha la bacheca '" +
-                        todo.getBacheca() + "'");
-            }
-
-            // Aggiungi la condivisione al database
-            dao.aggiungiCondivisione(todo, nomeUtente);
-
-            // Aggiorna il model
-            todo.aggiungiUtenteCondiviso(utenteDaAggiungere);
-            utenteDaAggiungere.aggiungiToDoCondiviso(todo);
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Errore durante l'aggiunta della condivisione", e);
+    // ==================== METODI DI SUPPORTO ====================
+    private void validaCredenziali(String username, String password) {
+        if (username == null || username.trim().isEmpty() ||
+                password == null || password.trim().isEmpty()) {
+            throw new IllegalArgumentException("Username e password obbligatori");
         }
     }
 
-    public void rimuoviCondivisione(ToDo todo, String nomeUtente) {
-        if (todo == null || nomeUtente == null || nomeUtente.trim().isEmpty()) {
-            throw new IllegalArgumentException("To-Do o nome utente non valido!");
-        }
-
-        try {
-            // Verifica che l'utente esista
-            Utente utenteDaRimuovere = dao.getUtenteByUsername(nomeUtente);
-            if (utenteDaRimuovere == null) {
-                throw new IllegalArgumentException("Utente non trovato");
-            }
-
-            // Verifica che l'utente corrente sia l'autore OPPURE che stia rimuovendo la propria condivisione
-            boolean isAutore = todo.getAutore() != null && todo.getAutore().getUsername().equals(utenteCorrente.getUsername());
-            boolean isSelfRemoval = nomeUtente.equals(utenteCorrente.getUsername());
-            boolean isCondiviso = todo.getCondivisoCon().stream()
-                    .anyMatch(u -> u.getUsername().equals(nomeUtente));
-
-            if (!isCondiviso) {
-                throw new IllegalStateException("L'utente selezionato non ha accesso a questo To-Do");
-            }
-
-            if (!isAutore && !isSelfRemoval) {
-                throw new IllegalStateException("Non hai i permessi per rimuovere questa condivisione");
-            }
-
-            // Rimuovi la condivisione dal database
-            dao.rimuoviCondivisione(todo, nomeUtente);
-
-            // Aggiorna il model
-            todo.rimuoviUtenteCondiviso(utenteDaRimuovere);
-            utenteDaRimuovere.rimuoviToDoCondiviso(todo);
-
-        } catch (SQLException e) {
-            throw new RuntimeException("Errore durante la rimozione della condivisione", e);
+    private void autenticaUtente(String username, String password) throws Exception {
+        utenteCorrente = dao.getUtenteByUsername(username);
+        if (utenteCorrente == null || !utenteCorrente.getPassword().equals(password)) {
+            throw new Exception("Credenziali non valide");
         }
     }
 
-    public List<String> getListaUtenti() throws SQLException {
-        return dao.getListaUtenti(); // 🔥 Il Controller prende i dati dal DAO
+    public void caricaDatiUtente() throws SQLException {
+        if (utenteCorrente == null) {
+            throw new IllegalStateException("Nessun utente autenticato");
+        }
+
+        List<Bacheca> bacheche = dao.getBachecheByUsername(utenteCorrente.getUsername());
+        List<ToDo> todos = dao.getToDoByUsername(utenteCorrente.getUsername());
+
+        utenteCorrente.setListaBacheche(bacheche);
+        utenteCorrente.getListaToDo().clear();
+
+        for (ToDo todo : todos) {
+            caricaAutoreECondivisioni(todo);
+            utenteCorrente.aggiungiToDo(todo, todo.getBacheca());
+        }
     }
+
+    private void caricaAutoreECondivisioni(ToDo todo) throws SQLException {
+        if (todo.getAutore() == null) {
+            String autoreUsername = dao.getAutoreToDo(todo.getId());
+            if (autoreUsername != null) {
+                todo.setAutore(dao.getUtenteByUsername(autoreUsername));
+            }
+        }
+
+        todo.getCondivisoCon().clear();
+        for (String username : dao.getCondivisioniPerToDo(todo.getId())) {
+            Utente utente = dao.getUtenteByUsername(username);
+            if (utente != null) {
+                todo.aggiungiUtenteCondiviso(utente);
+            }
+        }
+    }
+
+    private void inizializzaBachechePredefinite() throws SQLException {
+        if (!dao.haBachechePredefinite(utenteCorrente.getUsername())) {
+            List<Bacheca> bacheche = Utente.inizializzaBacheche();
+            dao.salvaBachechePredefinite(bacheche, utenteCorrente.getUsername());
+        }
+    }
+
+    private void avviaHomeFrame() {
+        loginFrame.chiudiFinestra();
+        homeFrame = new HomeFrame(this, loginFrame.getFrame());
+    }
+
+    private void validaInputBacheca(String... campi) {
+        for (String campo : campi) {
+            if (campo == null || campo.trim().isEmpty()) {
+                throw new IllegalArgumentException("Tutti i campi sono obbligatori");
+            }
+        }
+    }
+
+    private void validaInputToDo(String titolo, String descrizione, String bacheca) {
+        if (titolo == null || titolo.trim().isEmpty() ||
+                descrizione == null || descrizione.trim().isEmpty() ||
+                bacheca == null || bacheca.trim().isEmpty()) {
+            throw new IllegalArgumentException("Titolo, descrizione e bacheca obbligatori");
+        }
+    }
+
+    private void validaCondivisione(ToDo todo, String username) {
+        if (todo == null || username == null || username.trim().isEmpty()) {
+            throw new IllegalArgumentException("ToDo e username obbligatori");
+        }
+        if (!todo.getAutore().equals(utenteCorrente)) {
+            throw new IllegalStateException("Solo l'autore può gestire le condivisioni");
+        }
+    }
+
+    // ==================== GETTER ====================
+    public Utente getUtenteCorrente() { return utenteCorrente; }
+    public Bacheca getBachecaByTitolo(String titolo) { return utenteCorrente.getBachecaByTitolo(titolo); }
+    public ToDo getToDoPerTitoloEBoard(String titolo, String bacheca) {
+        return utenteCorrente.cercaToDoPerTitoloEBoard(titolo, bacheca);
+    }
+    public List<String> getListaUtenti() throws SQLException { return dao.getListaUtenti(); }
+    public List<Bacheca> getListaBachecheAggiornate() throws SQLException {
+        return getListaBacheche();
+    }
+
+
+
 }

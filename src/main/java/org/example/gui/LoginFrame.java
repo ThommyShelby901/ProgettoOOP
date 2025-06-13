@@ -9,11 +9,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class LoginFrame {
-    private JFrame frame;
+    private final JFrame frame;
     private AppController controller;
     private JPanel principale;
-    private JPanel loginPanel;
-    private JPanel registrazionePanel;
+    JPanel loginPanel;
+    JPanel registrazionePanel;
     private JTextField usernameField;
     private JPasswordField passwordField;
     private JButton loginButton;
@@ -26,7 +26,7 @@ public class LoginFrame {
 
     public LoginFrame() {
         frame = new JFrame("Login");
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         frame.setContentPane(principale);
         frame.pack();
         frame.setSize(800, 400);
@@ -34,8 +34,10 @@ public class LoginFrame {
         loginButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                String username = usernameField.getText();
+                String password = new String(passwordField.getPassword());
                 if (controller != null) {
-                    controller.handleLogin(usernameField.getText(), new String(passwordField.getPassword()));
+                    controller.login(username, password);
                 }
             }
         });
@@ -58,7 +60,7 @@ public class LoginFrame {
                     return;
                 }
                 if (controller != null) {
-                    controller.handleRegistration(username, password);
+                    controller.registrazione(username, password);
                 }
 
                 // Torna al login DOPO la registrazione
@@ -81,27 +83,12 @@ public class LoginFrame {
 
     }
 
-
-
-        // **Metodi per ottenere i dati**
-    public String getUsername() {
-        return usernameField.getText();  // Recupera il valore del campo username
-    }
-
-    public String getPassword() {
-        return new String(passwordField.getPassword());  // Recupera il valore del campo password
-    }
-
     public void chiudiFinestra() {
         frame.dispose();  // Chiude la finestra di Login
     }
 
     public void showMessage(String message) {
         JOptionPane.showMessageDialog(frame, message);  // Mostra un avviso all'utente
-    }
-
-    public JButton getLoginButton() {
-        return loginButton;  // **Ora il Controller può accedere al pulsante!**
     }
 
     public JFrame getFrame() {

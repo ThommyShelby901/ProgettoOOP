@@ -3,9 +3,7 @@ package org.example.model;
 import java.awt.*;
 import java.util.*;
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class Utente {
     private final String username;
@@ -18,10 +16,6 @@ public class Utente {
         this.password = password;
         this.listaToDo = new ArrayList<>();
         this.listaBacheche = new ArrayList<>();
-    }
-
-    public List<Bacheca> getListaBacheche() {
-        return listaBacheche;
     }
 
     public List<ToDo> getListaToDo(){return listaToDo; }
@@ -41,14 +35,9 @@ public class Utente {
         return bachechePredefinite;
     }
 
-
-
-
-
     public String getPassword(){
         return password;
     }
-
 
     public void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione) {
         for (Bacheca b : listaBacheche) {
@@ -96,9 +85,7 @@ public class Utente {
         return nuovoToDo;
     }
 
-
-
-    public void modificaToDo(ToDo todo, Utente utenteRichiedente,
+    public void modificaToDo(ToDo todo,
                              String nuovoTitolo, String nuovaDescrizione,
                              String nuovaDataScadenza, String nuovoUrl,
                              StatoToDo nuovoStato) {
@@ -221,6 +208,7 @@ public class Utente {
         }
         return result;
     }
+
     public List<ToDo> getToDoPerBacheca(String titoloBacheca) {
         List<ToDo> filtrati = new ArrayList<>();
         for (ToDo t : listaToDo) {
@@ -249,8 +237,6 @@ public class Utente {
             listaToDo.add(todo);
         }
     }
-
-
 
     public void aggiungiToDoCondiviso(ToDo todo) {
         if (!listaToDo.contains(todo)) {

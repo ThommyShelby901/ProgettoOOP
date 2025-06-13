@@ -114,14 +114,16 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             return;
         }
 
-        String query = "DELETE FROM bacheca WHERE titolo = ? AND username = ?";
+        if (connection == null) return; // ✅ Controllo sulla connessione
 
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, titolo);
-            pstmt.setString(2, username);
-            pstmt.executeUpdate();
-        }
+        String query = "DELETE FROM bacheca WHERE titolo = ? AND username = ?";
+        PreparedStatement pstmt = connection.prepareStatement(query);
+        pstmt.setString(1, titolo);
+        pstmt.setString(2, username);
+        pstmt.executeUpdate();
     }
+
+
 
     @Override
     public List<Bacheca> getListaBachecheDalDB(String username) throws SQLException {
