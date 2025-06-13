@@ -153,8 +153,9 @@ public class HomeFrame {
                 // 🔥 Nasconde la finestra principale per aprire la ricerca
                 frame.setVisible(false);
                 try {
-                    MostraRicercaDialog dialog = new MostraRicercaDialog(frame, controller);
-                    dialog.setVisible(true);
+                    MostraRicercaDialog dialog = new MostraRicercaDialog(controller, frame);
+                    dialog.mostra(); // ✅ Questo chiama il metodo che imposta setVisible(true) su JDialog interno
+
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(frame, "Errore durante l'apertura della ricerca: " + ex.getMessage(),
                             "Errore", JOptionPane.ERROR_MESSAGE);

@@ -1,5 +1,6 @@
 package org.example.model;
 
+import java.awt.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -11,7 +12,6 @@ public class ToDo {
     private String titoloToDo;
     private String sfondo;
     private String descrizioneToDo;
-    private String coloreSfondo;
     private LocalDate dataScadenza;
     private Bacheca bacheca;
     private StatoToDo statoToDo;
@@ -19,14 +19,19 @@ public class ToDo {
     private int id;
     private String titoloBacheca;
     private int ordine;
+    private Color coloreSfondo;
+    private String percorsoImmagine;
 
     //essendo opzionali andiamo a definirli con set
     public void setAutore(Utente autore){ this.autore=autore; }
     public void setUrl(String url){ this.url=url; }
     public void setTitoloToDo(String titoloToDo){ this.titoloToDo=titoloToDo; }
     public void setSfondo(String sfondo){ this.sfondo=sfondo; }
+    public void setColoreSfondo(Color coloreSfondo){this.coloreSfondo=coloreSfondo;}
     public void setDescrizioneToDo(String descrizioneToDo){ this.descrizioneToDo=descrizioneToDo; }
-    public void setColoreSfondo(String coloreSfondo){ this.coloreSfondo=coloreSfondo; }
+    public void setPercorsoImmagine(String percorsoImmagine) {
+        this.percorsoImmagine = percorsoImmagine;
+    }
     public void setBacheca(String titoloBacheca) {
         this.titoloBacheca = titoloBacheca;
         // Aggiungi questa linea per sincronizzare l'oggetto Bacheca
@@ -43,6 +48,10 @@ public class ToDo {
 
     public void setId(int id) {
         this.id = id;
+    }
+
+    public Color getColoreSfondo() {
+        return coloreSfondo;
     }
 
 
@@ -94,6 +103,10 @@ public class ToDo {
         }
     }
 
+    public String getPercorsoImmagine() {
+        return percorsoImmagine;
+    }
+
 
     public LocalDate getDataScadenza() {
         return dataScadenza;
@@ -101,10 +114,6 @@ public class ToDo {
 
     public String getSfondo() {
         return sfondo;
-    }
-
-    public String getColoreSfondo() {
-        return coloreSfondo;
     }
 
     public String getUrl() {

@@ -7,10 +7,13 @@ import org.example.model.Utente;
 
 
 import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Random;
 
 public class ToDoGUI {
     private JFrame frame;
@@ -20,11 +23,14 @@ public class ToDoGUI {
 
 
     // Componenti definiti nella form
+    private JButton btnVisualizzaToDo;
     private JPanel todoPanel;
+    private JScrollPane scroll;
     private JList<String> todoList;
     private DefaultListModel<String> todoListModel;
     private JButton btnAggiungiToDo, btnModificaToDo, btnEliminaToDo, btnIndietro;
     private JButton TrasferisciButton, btnSpostaToDo, btnVediCondivisioni;
+    private JButton btnAggiungiImmagine;
 
     public ToDoGUI(AppController controller, JFrame frameChiamante, String titoloBacheca) {
     this.controller = controller;
@@ -47,56 +53,60 @@ public class ToDoGUI {
     aggiornaListaToDo(titoloBacheca);
 
 
-    btnAggiungiToDo.addActionListener(new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e) {
+        btnAggiungiToDo.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
 
+                String titolo = JOptionPane.showInputDialog(frame, "Inserisci il titolo del To-Do:");
+                String descrizione = JOptionPane.showInputDialog(frame, "Inserisci la descrizione del To-Do:");
+                String dataScadenza = JOptionPane.showInputDialog(frame, "Inserisci la data di scadenza (AAAA-MM-GG) :");
+                String url = JOptionPane.showInputDialog(frame, "Inserisci un URL per il To-Do:");
+                String statoString = JOptionPane.showInputDialog(frame, "Inserisci lo stato del To-Do (lascia vuoto per NON COMPLETATO, oppure scrivi c per COMPLETATO):");
 
+                titolo = (titolo != null) ? titolo.trim() : "";
+                descrizione = (descrizione != null) ? descrizione.trim() : "";
+                dataScadenza = (dataScadenza != null && !dataScadenza.trim().isEmpty()) ? dataScadenza.trim() : null;
+                url = (url != null && !url.trim().isEmpty()) ? url.trim() : null;
 
-        String titolo = JOptionPane.showInputDialog(frame, "Inserisci il titolo del To-Do:");
-        String descrizione = JOptionPane.showInputDialog(frame, "Inserisci la descrizione del To-Do:");
-        String dataScadenza = JOptionPane.showInputDialog(frame, "Inserisci la data di scadenza (AAAA-MM-GG) (lascia vuoto se non applicabile):");
-        String url = JOptionPane.showInputDialog(frame, "Inserisci un URL per il To-Do:");
-        String statoString = JOptionPane.showInputDialog(frame, "Inserisci lo stato del To-Do (IN_CORSO, COMPLETATO, etc.):");
+                StatoToDo stato = StatoToDo.NONCOMPLETATO; // Valore di default
+                if (statoString != null && !statoString.trim().isEmpty()) {
+                    String statoInput = statoString.trim().toLowerCase(); // Converti in minuscolo per gestire tutti i casi
+                    if (statoInput.equals("c") || statoInput.equals("completato")) {
+                        stato = StatoToDo.COMPLETATO;
+                    }
+                }
 
-        titolo = (titolo != null) ? titolo.trim() : "";
-        descrizione = (descrizione != null) ? descrizione.trim() : "";
-        dataScadenza = (dataScadenza != null && !dataScadenza.trim().isEmpty()) ? dataScadenza.trim() : null;
-        url = (url != null && !url.trim().isEmpty()) ? url.trim() : null;
+                // ✅ Semplice selezione del colore con un `JComboBox`
+                String[] colori = {"Rosso", "Verde", "Blu", "Giallo", "Grigio"};
+                Color[] valoriColori = {Color.RED, Color.GREEN, Color.BLUE, Color.YELLOW, Color.GRAY, new Color(128, 0, 128)};
+                JComboBox<String> colorBox = new JComboBox<>(colori);
+                JOptionPane.showMessageDialog(frame, colorBox, "Scegli un colore", JOptionPane.QUESTION_MESSAGE);
 
-        StatoToDo stato = null;
-        if (statoString != null && !statoString.trim().isEmpty()) {
-            try {
-                stato = StatoToDo.valueOf(statoString.trim().toUpperCase());
-            } catch (IllegalArgumentException ex) {
-                JOptionPane.showMessageDialog(frame, "❌ Stato non valido. Usa uno dei seguenti: IN_CORSO, COMPLETATO, etc.");
-                return;
+                Color coloreSfondo = valoriColori[colorBox.getSelectedIndex()]; // ✅ Assegna il colore selezionato
+
+                if (!titolo.isEmpty() && !descrizione.isEmpty()) {
+                    try {
+                        controller.creaToDo(titolo, descrizione, dataScadenza, url, stato, titoloBacheca, coloreSfondo);
+                        aggiornaListaToDo(titoloBacheca);
+                        JOptionPane.showMessageDialog(frame, "✅ To-Do creato con successo!");
+                    } catch (SQLException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(frame, "❌ Titolo e descrizione non possono essere vuoti.");
+                }
             }
-        }
+        });
 
-        if (!titolo.isEmpty() && !descrizione.isEmpty()) {
-            try {
-                controller.creaToDo(titolo, descrizione, dataScadenza, url, stato, titoloBacheca);
-                aggiornaListaToDo(titoloBacheca);
-                JOptionPane.showMessageDialog(frame, "✅ To-Do creato con successo!");
-            } catch (SQLException ex) {
-                throw new RuntimeException(ex);
-            }
-        } else {
-            JOptionPane.showMessageDialog(frame, "❌ Titolo e descrizione non possono essere vuoti.");
-        }
-        }
-    });
 
         btnModificaToDo.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String selezionato = todoList.getSelectedValue();
                 if (selezionato != null) {
-                    // Estrai correttamente il titolo del ToDo
                     String titoloToDo = selezionato.replaceAll("^\\d+\\.\\s*([^(]*).*$", "$1").trim();
-
                     ToDo todo = controller.getToDoPerTitoloEBoard(titoloToDo, titoloBacheca);
+
                     if (todo != null) {
                         String nuovoTitolo = JOptionPane.showInputDialog(frame, "Modifica il titolo:", todo.getTitoloToDo());
                         String nuovaDescrizione = JOptionPane.showInputDialog(frame, "Modifica la descrizione:", todo.getDescrizioneToDo());
@@ -106,10 +116,17 @@ public class ToDoGUI {
                         if (nuovoTitolo != null && !nuovoTitolo.trim().isEmpty() &&
                                 nuovaDescrizione != null && !nuovaDescrizione.trim().isEmpty()) {
                             try {
+                                // Aggiungi questa riga per forzare l'aggiornamento dello stato
+                                StatoToDo nuovoStato = (JOptionPane.showConfirmDialog(frame, "Il To-Do è completato?",
+                                        "Stato", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION)
+                                        ? StatoToDo.COMPLETATO : StatoToDo.NONCOMPLETATO;
+
                                 controller.modificaToDo(todo, controller.getUtenteCorrente(), nuovoTitolo.trim(),
                                         nuovaDescrizione.trim(),
                                         nuovaDataScadenza != null && !nuovaDataScadenza.trim().isEmpty() ? nuovaDataScadenza.trim() : null,
-                                        null, null);
+                                        null, nuovoStato);
+
+                                // Forza un refresh completo della lista
                                 aggiornaListaToDo(titoloBacheca);
                                 JOptionPane.showMessageDialog(frame, "✅ To-Do modificato con successo!");
                             } catch (Exception ex) {
@@ -127,24 +144,26 @@ public class ToDoGUI {
             }
         });
 
-    btnEliminaToDo.addActionListener(new ActionListener() {
-        @Override
-        public void actionPerformed(ActionEvent e) {
+        btnEliminaToDo.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String selezionato = todoList.getSelectedValue();
+                if (selezionato != null) {
+                    // Estrai il titolo esattamente come fatto negli altri metodi
+                    String titoloToDo = selezionato.replaceAll("^\\d+\\.\\s*([^(]*).*$", "$1").trim();
 
-            String selezionato = todoList.getSelectedValue();
-            if (selezionato != null) {
-                try {
-                    controller.eliminaToDo(selezionato, titoloBacheca);
-                } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+                    try {
+                        controller.eliminaToDo(titoloToDo, titoloBacheca);
+                        aggiornaListaToDo(titoloBacheca); // Aggiorna la lista dopo l'eliminazione
+                        JOptionPane.showMessageDialog(frame, "✅ To-Do eliminato con successo!");
+                    } catch (SQLException ex) {
+                        JOptionPane.showMessageDialog(frame, "❌ Errore durante l'eliminazione: " + ex.getMessage());
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(frame, "❌ Seleziona un To-Do da eliminare.");
                 }
-                aggiornaListaToDo(titoloBacheca);
-                JOptionPane.showMessageDialog(frame, "✅ To-Do eliminato con successo!");
-            } else {
-                JOptionPane.showMessageDialog(frame, "❌ Seleziona un To-Do da eliminare.");
             }
-        }
-    });
+        });
 
     btnIndietro.addActionListener(new ActionListener() {
         @Override
@@ -233,6 +252,53 @@ public class ToDoGUI {
                 apriGestioneCondivisioniBacheca();
             }
         });
+
+        btnVisualizzaToDo.addActionListener(e -> {
+            String selezionato = todoList.getSelectedValue();
+            if (selezionato != null) {
+                String titoloToDo = selezionato.replaceAll("^\\d+\\.\\s*([^(]*).*$", "$1").trim();
+                ToDo todo = controller.getToDoPerTitoloEBoard(titoloToDo, titoloBacheca);
+                if (todo != null) {
+                    new VisualizzaToDoDialog(frame, todo, controller);
+                }
+            }
+        });
+
+
+
+        btnAggiungiImmagine.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String selezionato = todoList.getSelectedValue();
+                if (selezionato != null) {
+                    String titoloToDo = selezionato.replaceAll("^\\d+\\.\\s*([^(]*).*$", "$1").trim();
+                    ToDo todo = controller.getToDoPerTitoloEBoard(titoloToDo, titoloBacheca);
+
+                    if (todo != null) {
+                        JFileChooser fileChooser = new JFileChooser();
+                        fileChooser.setDialogTitle("Seleziona un'immagine");
+                        fileChooser.setFileFilter(new FileNameExtensionFilter("Immagini", "jpg", "jpeg", "png", "gif"));
+
+                        int result = fileChooser.showOpenDialog(frame);
+                        if (result == JFileChooser.APPROVE_OPTION) {
+                            try {
+                                String percorsoImmagine = fileChooser.getSelectedFile().getAbsolutePath();
+                                controller.aggiungiImmagineAToDo(todo, percorsoImmagine);
+                                JOptionPane.showMessageDialog(frame, "Immagine aggiunta con successo!");
+                            } catch (SQLException ex) {
+                                JOptionPane.showMessageDialog(frame, "Errore durante il salvataggio: " + ex.getMessage());
+                            }
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(frame, "To-Do non trovato!");
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Seleziona un To-Do a cui aggiungere l'immagine.");
+                }
+            }
+        });
+
+
 
 
         frame.setVisible(true);

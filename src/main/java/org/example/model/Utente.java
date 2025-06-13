@@ -1,8 +1,10 @@
 package org.example.model;
 
+import java.awt.*;
 import java.util.*;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class Utente {
@@ -69,7 +71,7 @@ public class Utente {
     }
 
     public ToDo creaToDo(String titolo, String descrizione,
-                         String dataScadenza, String url, StatoToDo stato, String titoloBacheca) {
+                         String dataScadenza, String url, StatoToDo stato, String titoloBacheca, Color coloreSfondo) {
         if (titolo == null || descrizione == null || titoloBacheca == null) {
             return null;
         }
@@ -86,6 +88,7 @@ public class Utente {
         nuovoToDo.setStatoToDo(stato);
         nuovoToDo.setBacheca(titoloBacheca);
         nuovoToDo.setAutore(this);
+        nuovoToDo.setColoreSfondo(coloreSfondo);
 
         listaToDo.add(nuovoToDo);
 
@@ -103,17 +106,13 @@ public class Utente {
         if (!listaToDo.contains(todo)) {
             return;
         }
-        // Controllo che l'utente sia l'autore
-        if (!todo.getAutore().equals(utenteRichiedente)) {
-            return;
-        }
+
         // Modifiche (solo se i parametri non sono null)
         if (nuovoTitolo != null) todo.setTitoloToDo(nuovoTitolo);
         if (nuovaDescrizione != null) todo.setDescrizioneToDo(nuovaDescrizione);
         if (nuovaDataScadenza != null) todo.setDataScadenza(nuovaDataScadenza);
         if (nuovoUrl != null) todo.setUrl(nuovoUrl);
         if (nuovoStato != null) todo.setStatoToDo(nuovoStato);
-
     }
 
     public ToDo cercaToDoPerTitoloEBoard(String titolo, String titoloBacheca) {
@@ -212,18 +211,16 @@ public class Utente {
         return result;
     }
 
-    public List<ToDo> cercaToDoPerTesto(String testo) {
+    public List<ToDo> cercaToDoPerTitolo(String titolo) {
         List<ToDo> result = new ArrayList<>();
-        String testoLower = testo.toLowerCase();
+        String titoloLower = titolo.toLowerCase();
         for (ToDo t : listaToDo) {
-            if ((t.getTitoloToDo() != null && t.getTitoloToDo().toLowerCase().contains(testoLower)) ||
-                    (t.getDescrizioneToDo() != null && t.getDescrizioneToDo().toLowerCase().contains(testoLower))) {
+            if (t.getTitoloToDo() != null && t.getTitoloToDo().toLowerCase().contains(titoloLower)) {
                 result.add(t);
             }
         }
         return result;
     }
-
     public List<ToDo> getToDoPerBacheca(String titoloBacheca) {
         List<ToDo> filtrati = new ArrayList<>();
         for (ToDo t : listaToDo) {

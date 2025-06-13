@@ -3,23 +3,18 @@ package org.example.controller;
 import org.example.dao.DatabaseDAO;
 import org.example.gui.HomeFrame;
 import org.example.gui.LoginFrame;
-import org.example.gui.ToDoGUI;
-import org.example.implementazionepostgresdao.DatabaseImplementazionePostgresDAO;
 import org.example.model.Bacheca;
 import org.example.model.StatoToDo;
 import org.example.model.ToDo;
 import org.example.model.Utente;
 
-
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.*;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class AppController {
     private final LoginFrame loginFrame;
@@ -68,7 +63,7 @@ public class AppController {
     }
 
     private void autenticaUtente(String username, String password)
-            throws SQLException, Exception {
+            throws Exception {
         utenteCorrente = dao.getUtenteByUsername(username);
 
         if (utenteCorrente == null || !utenteCorrente.getPassword().equals(password)) {
@@ -188,12 +183,6 @@ public class AppController {
         dao.eliminaBacheca(titolo, utenteCorrente.getUsername());
     }
 
-
-
-
-
-
-
     // ---------------------- GESTIONE TO-DO ----------------------
 
     public List<ToDo> getTuttiToDo(String titoloBacheca) throws SQLException {
@@ -222,12 +211,13 @@ public class AppController {
     }
 
     public void creaToDo(String titolo, String descrizione,
-                         String dataScadenza, String url, StatoToDo stato, String titoloBacheca) throws SQLException {
-        ToDo nuovoToDo = utenteCorrente.creaToDo(titolo, descrizione, dataScadenza, url, stato, titoloBacheca);
+                         String dataScadenza, String url, StatoToDo stato, String titoloBacheca, Color coloreSfondo) throws SQLException {
+        ToDo nuovoToDo = utenteCorrente.creaToDo(titolo, descrizione, dataScadenza, url, stato, titoloBacheca, coloreSfondo);
 
         // Assicurati che l'autore sia impostato
         if (nuovoToDo != null) {
-            nuovoToDo.setAutore(utenteCorrente); // Imposta esplicitamente l'autore
+            nuovoToDo.setAutore(utenteCorrente);// Imposta esplicitamente l'autore
+            nuovoToDo.setColoreSfondo(coloreSfondo);
             dao.creaToDo(nuovoToDo, titoloBacheca);
         }
     }
@@ -235,18 +225,21 @@ public class AppController {
 
     public void modificaToDo(ToDo todo, Utente utenteRichiedente,
                              String nuovoTitolo, String nuovaDescrizione,
-
                              String nuovaDataScadenza, String nuovoUrl,
-                             StatoToDo nuovoStato)  {
+                             StatoToDo nuovoStato) throws SQLException {
         if (todo == null || utenteRichiedente == null) {
             return;
         }
 
-        // Modifica il `Model` tramite `Utente`
-        utenteRichiedente.modificaToDo(todo, utenteRichiedente, nuovoTitolo, nuovaDescrizione, nuovaDataScadenza, nuovoUrl, nuovoStato);
+        // Modifica il modello
+        utenteRichiedente.modificaToDo(todo, utenteRichiedente, nuovoTitolo, nuovaDescrizione,
+                nuovaDataScadenza, nuovoUrl, nuovoStato);
 
-        // Ora salva la modifica nel database tramite `DAO`
+        // Aggiorna il database
         dao.aggiornaToDo(todo);
+
+        // Ricarica i dati per assicurarsi la sincronizzazione
+        caricaDatiUtente(utenteCorrente.getUsername());
     }
 
 
@@ -302,7 +295,7 @@ public class AppController {
         final String titoloBachecaPulito = titoloBacheca.trim();
         final String titoloDaSpostarePulito = titoloDaSpostare.trim();
 
-        System.out.println("📋 ToDo nella bacheca '" + titoloBachecaPulito + "':");
+        System.out.println(" ToDo nella bacheca '" + titoloBachecaPulito + "':");
         for (ToDo t : utenteCorrente.getListaToDo()) {
             if (t.getBacheca().trim().equalsIgnoreCase(titoloBachecaPulito)) {
                 System.out.println("   - '" + t.getTitoloToDo() + "'");
@@ -328,7 +321,6 @@ public class AppController {
             }
         });
 
-        // Aggiorno l'ordine nel database per ogni ToDo nella lista filtrata
         for (int i = 0; i < listaFiltrata.size(); i++) {
             ToDo todo = listaFiltrata.get(i);
             todo.setOrdine(i);
@@ -336,21 +328,37 @@ public class AppController {
         }
     }
 
-
-    public List<ToDo> getToDoInScadenzaOggi() throws SQLException {
-        LocalDate oggi = LocalDate.now();
-        // Prima cerca nel model
-        List<ToDo> result = utenteCorrente.getToDoInScadenza(oggi);
-        if (result.isEmpty()) {
-            // Se non trova nel model, cerca nel DB
-            result = dao.getToDoInScadenza(utenteCorrente.getUsername(), oggi);
-            // Aggiorna il model
-            for (ToDo t : result) {
-                utenteCorrente.aggiungiToDo(t, t.getBacheca());
-            }
+    public void aggiungiImmagineAToDo(ToDo todo, String percorsoImmagine) throws SQLException {
+        if (todo == null) {
+            throw new IllegalArgumentException("ToDo non può essere null");
         }
-        return result;
+
+        // Verifica che l'utente corrente abbia i permessi sul ToDo
+        if (!todo.getAutore().getUsername().equals(utenteCorrente.getUsername()) &&
+                !todo.getCondivisoCon().contains(utenteCorrente)) {
+            throw new IllegalStateException("Non hai i permessi per modificare questo ToDo");
+        }
+
+        todo.setPercorsoImmagine(percorsoImmagine);
+        dao.aggiornaToDo(todo);
     }
+
+    public void rimuoviImmagineDaToDo(ToDo todo) throws SQLException {
+        if (todo == null) {
+            throw new IllegalArgumentException("ToDo non può essere null");
+        }
+
+        // Verifica che l'utente corrente abbia i permessi sul ToDo
+        if (!todo.getAutore().getUsername().equals(utenteCorrente.getUsername()) &&
+                !todo.getCondivisoCon().contains(utenteCorrente)) {
+            throw new IllegalStateException("Non hai i permessi per modificare questo ToDo");
+        }
+
+        todo.setPercorsoImmagine(null);
+        dao.aggiornaToDo(todo);
+    }
+
+
 
     public List<ToDo> getToDoInScadenzaEntro(LocalDate dataLimite) throws SQLException {
         List<ToDo> result = utenteCorrente.getToDoInScadenzaEntro(dataLimite);
@@ -363,10 +371,12 @@ public class AppController {
         return result;
     }
 
-    public List<ToDo> cercaToDoPerTesto(String testo) throws SQLException {
-        List<ToDo> result = utenteCorrente.cercaToDoPerTesto(testo);
+    // Aggiungi questo metodo alla classe AppController
+    public List<ToDo> getToDoInScadenzaOggi() throws SQLException {
+        LocalDate oggi = LocalDate.now();
+        List<ToDo> result = utenteCorrente.getToDoInScadenza(oggi);
         if (result.isEmpty()) {
-            result = dao.cercaToDoPerTesto(utenteCorrente.getUsername(), testo);
+            result = dao.getToDoInScadenzaEntro(utenteCorrente.getUsername(), oggi);
             for (ToDo t : result) {
                 utenteCorrente.aggiungiToDo(t, t.getBacheca());
             }
@@ -376,12 +386,23 @@ public class AppController {
 
 
 
+    public List<ToDo> cercaToDoPerTitolo(String titolo) throws SQLException {
+        List<ToDo> result = utenteCorrente.cercaToDoPerTitolo(titolo);
+        if (result.isEmpty()) {
+            result = dao.cercaToDoPerTitolo(utenteCorrente.getUsername(), titolo);
+            for (ToDo t : result) {
+                utenteCorrente.aggiungiToDo(t, t.getBacheca());
+            }
+        }
+        return result;
+    }
 
-
-
-
-
-
+    public void aggiornaToDo(ToDo todo) throws SQLException {
+        if (todo == null) {
+            throw new IllegalArgumentException("ToDo non può essere null");
+        }
+        dao.aggiornaToDo(todo);
+    }
 
 
     // ---------------------- GESTIONE CONDIVISIONI ----------------------
@@ -401,6 +422,20 @@ public class AppController {
             // Verifica che l'utente corrente sia l'autore
             if (todo.getAutore() == null || !todo.getAutore().getUsername().equals(utenteCorrente.getUsername())) {
                 throw new IllegalStateException("Solo l'autore può condividere il To-Do");
+            }
+
+            // Verifica che l'utente abbia la stessa bacheca
+            boolean haBacheca = false;
+            for (Bacheca b : utenteDaAggiungere.getListaBacheche()) {
+                if (b.getTitoloBacheca().equalsIgnoreCase(todo.getBacheca())) {
+                    haBacheca = true;
+                    break;
+                }
+            }
+
+            if (!haBacheca) {
+                throw new IllegalStateException("L'utente con cui vuoi condividere non ha la bacheca '" +
+                        todo.getBacheca() + "'");
             }
 
             // Aggiungi la condivisione al database

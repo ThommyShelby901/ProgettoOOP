@@ -11,161 +11,105 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
 
-public class MostraRicercaDialog extends JDialog {
-    private final AppController controller;
+public class MostraRicercaDialog {
+    private JDialog dialog;
+    private AppController controller;
 
-    // Componenti UI
-    private JTextField txtRicerca;
-    private JButton btnCercaTesto;
-    private JButton btnScadenzaOggi;
-    private JButton btnScadenzaEntro;
+    // 🔥 Componenti UI definiti nel form grafico (GUI Builder)
+    private JPanel pnlRicerca;
+    private JTextField txtTitolo;
+    private JTextField txtData;
+    private JButton btnCercaTitolo;
+    private JButton btnCercaData;
+    private JButton btnScadenzeOggi;
     private JList<String> lstRisultati;
     private DefaultListModel<String> modelRisultati;
+    private JScrollPane scrollPane;
+    private JLabel lblTitolo;
+    private JLabel lblData;
 
-    public MostraRicercaDialog(JFrame parent, AppController controller) {
-        super(parent, "Ricerca ToDo", true);
+    public MostraRicercaDialog(AppController controller, JFrame parent) {
         this.controller = controller;
-        initUI();
-        setupListeners();
-    }
-
-    private void initUI() {
-        setLayout(new BorderLayout(10, 10));
-        setSize(650, 450);
-        setLocationRelativeTo(getParent());
-        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
-
-        // Pannello ricerca
-        JPanel pnlRicerca = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
-        pnlRicerca.setBorder(BorderFactory.createTitledBorder("Parametri di ricerca"));
-
-        txtRicerca = new JTextField(25);
-        btnCercaTesto = new JButton("Cerca testo");
-        btnScadenzaOggi = new JButton("Scadenze oggi");
-        btnScadenzaEntro = new JButton("Scadenze entro data");
-
-        pnlRicerca.add(new JLabel("Testo:"));
-        pnlRicerca.add(txtRicerca);
-        pnlRicerca.add(btnCercaTesto);
-        pnlRicerca.add(btnScadenzaOggi);
-        pnlRicerca.add(btnScadenzaEntro);
-
-        // Pannello risultati
-        JPanel pnlRisultati = new JPanel(new BorderLayout());
-        pnlRisultati.setBorder(BorderFactory.createTitledBorder("Risultati"));
+        dialog = new JDialog(parent, "Ricerca ToDo", true);
 
         modelRisultati = new DefaultListModel<>();
-        lstRisultati = new JList<>(modelRisultati);
-        lstRisultati.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        lstRisultati.setModel(modelRisultati);
+        // 🔥 Usa il pannello già disegnato nel GUI Builder
+        dialog.setContentPane(pnlRicerca);
+        dialog.setSize(650, 450);
+        dialog.setLocationRelativeTo(parent);
 
-        JScrollPane scrollPane = new JScrollPane(lstRisultati);
-        pnlRisultati.add(scrollPane, BorderLayout.CENTER);
-
-        // Aggiunta al content pane
-        add(pnlRicerca, BorderLayout.NORTH);
-        add(pnlRisultati, BorderLayout.CENTER);
+        configuraEventi();
     }
 
-    private void setupListeners() {
-        btnCercaTesto.addActionListener(new ActionListener() {
+    private void configuraEventi() {
+        btnCercaTitolo.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                cercaPerTesto(e);
+                cercaPerTitolo();
             }
         });
 
-        btnScadenzaOggi.addActionListener(new ActionListener() {
+        btnCercaData.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                cercaScadenzaOggi(e);
+                cercaPerData();
             }
         });
 
-        btnScadenzaEntro.addActionListener(new ActionListener() {
+        btnScadenzeOggi.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                cercaScadenzaEntro(e);
+                mostraScadenzeOggi();
             }
         });
     }
 
-    private void cercaPerTesto(ActionEvent e) {
-        String testo = txtRicerca.getText().trim();
-        if (testo.isEmpty()) {
-            showWarning("Inserire un testo da cercare");
+    private void cercaPerTitolo() {
+        String titolo = txtTitolo.getText().trim();
+        if (titolo.isEmpty()) {
+            JOptionPane.showMessageDialog(dialog, "Inserisci un titolo", "Errore", JOptionPane.WARNING_MESSAGE);
             return;
         }
-
         try {
-            updateResults(controller.cercaToDoPerTesto(testo));
+            List<ToDo> risultati = controller.cercaToDoPerTitolo(titolo);
+            aggiornaListaRisultati(risultati);
         } catch (SQLException ex) {
-            showError("Errore durante la ricerca: " + ex.getMessage());
+            JOptionPane.showMessageDialog(dialog, "Errore durante la ricerca: " + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private void cercaScadenzaOggi(ActionEvent e) {
+    private void cercaPerData() {
         try {
-            updateResults(controller.getToDoInScadenzaOggi());
-        } catch (SQLException ex) {
-            showError("Errore durante la ricerca: " + ex.getMessage());
-        }
-    }
-
-    private void cercaScadenzaEntro(ActionEvent e) {
-        String input = JOptionPane.showInputDialog(
-                this,
-                "Inserisci data (AAAA-MM-GG):",
-                "Ricerca per scadenza",
-                JOptionPane.QUESTION_MESSAGE
-        );
-
-        if (input == null || input.trim().isEmpty()) return;
-
-        try {
-            LocalDate data = LocalDate.parse(input);
-            updateResults(controller.getToDoInScadenzaEntro(data));
+            LocalDate data = LocalDate.parse(txtData.getText().trim());
+            List<ToDo> risultati = controller.getToDoInScadenzaEntro(data);
+            aggiornaListaRisultati(risultati);
         } catch (Exception ex) {
-            showError("Formato data non valido. Usare AAAA-MM-GG");
+            JOptionPane.showMessageDialog(dialog, "Formato data non valido (AAAA-MM-GG)", "Errore", JOptionPane.ERROR_MESSAGE);
         }
     }
 
-    private void updateResults(List<ToDo> risultati) {
-        modelRisultati.clear();
+    private void mostraScadenzeOggi() {
+        try {
+            List<ToDo> risultati = controller.getToDoInScadenzaOggi();
+            aggiornaListaRisultati(risultati);
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(dialog, "Errore durante la ricerca: " + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 
+    private void aggiornaListaRisultati(List<ToDo> risultati) {
+        modelRisultati.clear();
         if (risultati.isEmpty()) {
             modelRisultati.addElement("Nessun risultato trovato");
             return;
         }
-
-        risultati.forEach(todo -> {
-            String scadenza = todo.getDataScadenza() != null
-                    ? todo.getDataScadenza().toString()
-                    : "Nessuna scadenza";
-
-            modelRisultati.addElement(String.format(
-                    "%s - %s (Scadenza: %s)",
-                    todo.getTitoloToDo(),
-                    todo.getBacheca(),
-                    scadenza
-            ));
-        });
+        for (ToDo todo : risultati) {
+            modelRisultati.addElement(todo.getTitoloToDo() + " - Scadenza: " + todo.getDataScadenza());
+        }
     }
 
-    private void showError(String message) {
-        JOptionPane.showMessageDialog(
-                this,
-                message,
-                "Errore",
-                JOptionPane.ERROR_MESSAGE
-        );
-    }
-
-    private void showWarning(String message) {
-        JOptionPane.showMessageDialog(
-                this,
-                message,
-                "Attenzione",
-                JOptionPane.WARNING_MESSAGE
-        );
+    public void mostra() {
+        dialog.setVisible(true);
     }
 }

@@ -16,14 +16,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class BachecaGUI {
-        private JFrame frame;
+    private JScrollPane scrollPaneUtenti;
+
+    private JFrame frame;
         private JFrame frameChiamante;
         private AppController controller;
         private JPanel bachecaPanel;
         protected JList<String> todoList;
         protected JList<String> boardList;
         private DefaultListModel<String> boardListModel;
-        private JComboBox<String> comboBoxUtenti;
+        private JList<String> listUtenti;
+        private DefaultListModel<String> listUtentiModel;
         private JButton btnIndietro;
         private JButton btnAggiungiCondivisione;
         private JButton btnRimuoviCondivisione;
@@ -38,19 +41,45 @@ public class BachecaGUI {
             frame.setVisible(true);
         }
 
-        private void inizializzaUI() throws SQLException {
-            aggiornaComboBoxUtenti();
+    private void inizializzaUI() throws SQLException {
+        frame = new JFrame("Gestione Bacheche");
+        frame.setContentPane(bachecaPanel);
+        frame.setSize(600, 400);
+        frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+        frame.setLocationRelativeTo(null);
 
-            frame = new JFrame("Gestione Bacheche");
-            frame.setContentPane(bachecaPanel);
-            frame.setSize(600, 400);
-            frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-            frame.setLocationRelativeTo(null);
+        // Associa i modelli alle JList già presenti nella form
+        boardListModel = new DefaultListModel<>();
+        boardList.setModel(boardListModel);
 
-            boardListModel = new DefaultListModel<>();
-            boardList.setModel(boardListModel);
-            aggiornaListaBacheche();
+        listUtentiModel = new DefaultListModel<>();
+        listUtenti.setModel(listUtentiModel);
+
+        listUtenti.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+
+
+        // Aggiornamento dei dati
+        aggiornaListaUtenti();
+        aggiornaListaBacheche();
+    }
+
+
+
+
+    private void aggiornaListaUtenti() {
+        try {
+            System.out.println("Utenti recuperati: " + controller.getListaUtenti());
+            listUtentiModel.clear();
+            for (String utente : controller.getListaUtenti()) {
+                if (!utente.equals(controller.getUtenteCorrente().getUsername())) {
+                    System.out.println("Aggiungo utente: " + utente);
+                    listUtentiModel.addElement(utente);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+    }
 
 
 
@@ -116,51 +145,30 @@ public class BachecaGUI {
     }
 
     private void aggiungiCondivisione() {
-        String utenteSelezionato = (String) comboBoxUtenti.getSelectedItem();
+        List<String> utentiSelezionati = listUtenti.getSelectedValuesList();
         String titoloToDo = todoList.getSelectedValue();
 
-        if (utenteSelezionato == null || titoloToDo == null || board == null) {
-            JOptionPane.showMessageDialog(frame, "Errore: Seleziona un To-Do e un utente!");
+        if (utentiSelezionati.isEmpty() || titoloToDo == null || board == null) {
+            JOptionPane.showMessageDialog(frame, "Errore: Seleziona un To-Do e almeno un utente!");
             return;
         }
 
         try {
-            ToDo todo = controller.getToDoPerTitoloEBoard(titoloToDo, board.getTitoloBacheca());
-            if (todo != null) {
-                controller.aggiungiCondivisione(todo, utenteSelezionato);
-                JOptionPane.showMessageDialog(frame, "To-Do condiviso con " + utenteSelezionato);
-                aggiornaListaToDo(board.getTitoloBacheca());
-            }
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(frame, "Errore: " + e.getMessage());
-        }
-    }
-
-    private void rimuoviCondivisione() {
-        String utenteSelezionato = (String) comboBoxUtenti.getSelectedItem();
-        String titoloToDo = todoList.getSelectedValue();
-
-        if (utenteSelezionato == null || titoloToDo == null || board == null) {
-            JOptionPane.showMessageDialog(frame, "Errore: Seleziona un To-Do e un utente!");
-            return;
-        }
-
-        try {
-            // Estrai il titolo pulito (senza la parte delle condivisioni)
+            // Estrai il titolo pulito (senza la parte delle condivisioni se presente)
             String titoloPulito = titoloToDo.split(" \\[Condiviso con:")[0].trim();
-
             ToDo todo = controller.getToDoPerTitoloEBoard(titoloPulito, board.getTitoloBacheca());
+
             if (todo != null) {
-                controller.rimuoviCondivisione(todo, utenteSelezionato);
-                JOptionPane.showMessageDialog(frame, "Condivisione rimossa per " + utenteSelezionato);
+                for (String utente : utentiSelezionati) {
+                    controller.aggiungiCondivisione(todo, utente);
+                }
+                JOptionPane.showMessageDialog(frame, "To-Do condiviso con " + String.join(", ", utentiSelezionati));
 
-                // Forza un refresh completo dei dati
+                // Ricarica i dati dell'utente corrente
                 controller.caricaDatiUtente(controller.getUtenteCorrente().getUsername());
-
-                // Aggiorna la lista
                 aggiornaListaToDo(board.getTitoloBacheca());
 
-                // Seleziona nuovamente lo stesso ToDo se esiste ancora
+                // Mantieni la selezione del To-Do dopo l'aggiornamento
                 for (int i = 0; i < todoList.getModel().getSize(); i++) {
                     String current = todoList.getModel().getElementAt(i);
                     if (current.startsWith(titoloPulito)) {
@@ -168,8 +176,42 @@ public class BachecaGUI {
                         break;
                     }
                 }
-            } else {
-                JOptionPane.showMessageDialog(frame, "Errore: To-Do non trovato");
+            }
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(frame, "Errore: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    private void rimuoviCondivisione() {
+        List<String> utentiSelezionati = listUtenti.getSelectedValuesList();
+        String titoloToDo = todoList.getSelectedValue();
+
+        if (utentiSelezionati.isEmpty() || titoloToDo == null || board == null) {
+            JOptionPane.showMessageDialog(frame, "Errore: Seleziona un To-Do e almeno un utente!");
+            return;
+        }
+
+        try {
+            String titoloPulito = titoloToDo.split(" \\[Condiviso con:")[0].trim();
+            ToDo todo = controller.getToDoPerTitoloEBoard(titoloPulito, board.getTitoloBacheca());
+
+            if (todo != null) {
+                for (String utente : utentiSelezionati) {
+                    controller.rimuoviCondivisione(todo, utente);
+                }
+                JOptionPane.showMessageDialog(frame, "Condivisioni rimosse per " + String.join(", ", utentiSelezionati));
+
+                controller.caricaDatiUtente(controller.getUtenteCorrente().getUsername());
+                aggiornaListaToDo(board.getTitoloBacheca());
+
+                for (int i = 0; i < todoList.getModel().getSize(); i++) {
+                    String current = todoList.getModel().getElementAt(i);
+                    if (current.startsWith(titoloPulito)) {
+                        todoList.setSelectedIndex(i);
+                        break;
+                    }
+                }
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(frame, "Errore: " + e.getMessage());
@@ -212,17 +254,6 @@ public class BachecaGUI {
     }
 
 
-
-        private void aggiornaComboBoxUtenti() {
-            try {
-                comboBoxUtenti.removeAllItems();
-                for (String utente : controller.getListaUtenti()) {
-                    comboBoxUtenti.addItem(utente);
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
 
 
     }

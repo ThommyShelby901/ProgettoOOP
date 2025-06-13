@@ -5,7 +5,6 @@ import org.example.model.ToDo;
 import org.example.model.Utente;
 
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.List;
@@ -18,9 +17,9 @@ public interface DatabaseDAO {
     List<String> getListaUtenti() throws SQLException;
     void salvaBachechePredefinite(List<Bacheca> bacheche, String username) throws SQLException;
     boolean haBachechePredefinite(String username) throws SQLException;
-    List<ToDo> getToDoInScadenza(String username, LocalDate data) throws SQLException;
+
     public List<ToDo> getToDoInScadenzaEntro(String username, LocalDate dataLimite) throws SQLException;
-    List<ToDo> cercaToDoPerTesto(String username, String testo) throws SQLException;
+    public List<ToDo> cercaToDoPerTitolo(String username, String titolo) throws SQLException;
      List<ToDo> executeToDoQuery(PreparedStatement pstmt) throws SQLException;
     public boolean isToDoSharedWithUser(int idToDo, String username) throws SQLException;
     public String getAutoreToDo(int idToDo) throws SQLException;
@@ -40,7 +39,7 @@ public interface DatabaseDAO {
     void creaToDo(ToDo todo, String titoloBacheca) throws SQLException;
     ToDo getToDoByTitolo(String titolo) throws SQLException;
     List<ToDo> getTuttiToDo(String titoloBacheca, String username) throws SQLException;
-    void aggiornaToDo(ToDo todo) ;
+    void aggiornaToDo(ToDo todo) throws SQLException;
     void eliminaToDo(String titolo, String titoloBacheca) throws SQLException;
     void trasferisciToDo(ToDo todo, String titoloBachecaDestinazione) throws SQLException;
     List<Bacheca> getListaBachecheDalDB(String username) throws SQLException;
