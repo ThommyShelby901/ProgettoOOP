@@ -9,7 +9,6 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class AppController {
     // Componenti BCE
@@ -95,7 +94,7 @@ public class AppController {
         return dao.getTuttiToDo(titoloBacheca, utenteCorrente.getUsername());
     }
 
-    public void creaToDo(String titolo, String descrizione, String dataScadenza,
+    public void creaToDo(String titolo, String descrizione, LocalDate dataScadenza,
                          String url, StatoToDo stato, String titoloBacheca, Color colore) throws SQLException {
         validaInputToDo(titolo, descrizione, titoloBacheca);
         ToDo todo = utenteCorrente.creaToDo(titolo, descrizione, dataScadenza, url, stato, titoloBacheca, colore);
@@ -107,7 +106,7 @@ public class AppController {
 
     // Modifica nel metodo modificaToDo
     public void modificaToDo(ToDo todo, String nuovoTitolo, String nuovaDescrizione,
-                             String nuovaDataScadenza, String nuovoUrl, StatoToDo nuovoStato) throws SQLException {
+                             LocalDate nuovaDataScadenza, String nuovoUrl, StatoToDo nuovoStato) throws SQLException {
         if (todo == null) throw new IllegalArgumentException("ToDo non può essere null");
 
         // Rimossa la richiesta dell'utente come parametro
@@ -129,10 +128,24 @@ public class AppController {
     }
 
     public void spostaToDo(String titoloBacheca, String titoloToDo, int nuovaPosizione) throws SQLException {
-        utenteCorrente.spostaToDo(titoloBacheca, titoloToDo, nuovaPosizione);
-        List<ToDo> todos = utenteCorrente.getToDoPerBacheca(titoloBacheca);
-        for (int i = 0; i < todos.size(); i++) {
-            dao.aggiornaOrdineToDo(todos.get(i).getId(), i);
+        try {
+            // Chiama il metodo del model
+            utenteCorrente.spostaToDo(titoloBacheca, titoloToDo, nuovaPosizione);
+
+            // Aggiorna l'ordine nel database per tutti i To-Do nella bacheca
+            List<ToDo> todos = utenteCorrente.getToDoPerBacheca(titoloBacheca);
+            for (ToDo todo : todos) {
+                if (todo.getId() == 0) {
+                    // Se l'ID non è stato settato, cerca il To-Do nel database
+                    ToDo dbTodo = getToDoPerTitoloEBoard(todo.getTitoloToDo(), titoloBacheca);
+                    if (dbTodo != null) {
+                        todo.setId(dbTodo.getId());
+                    }
+                }
+                dao.aggiornaOrdineToDo(todo.getId(), todo.getOrdine());
+            }
+        } catch (Exception e) {
+            throw new SQLException("Errore durante lo spostamento: " + e.getMessage());
         }
     }
 
@@ -159,7 +172,6 @@ public class AppController {
             throw new IllegalArgumentException("ToDo non può essere null");
         }
 
-        // Verifica che l'utente corrente abbia i permessi sul ToDo
         if (!todo.getAutore().getUsername().equals(utenteCorrente.getUsername()) &&
                 !todo.getCondivisoCon().contains(utenteCorrente)) {
             throw new IllegalStateException("Non hai i permessi per modificare questo ToDo");
@@ -174,7 +186,6 @@ public class AppController {
             throw new IllegalArgumentException("ToDo non può essere null");
         }
 
-        // Verifica che l'utente corrente abbia i permessi sul ToDo
         if (!todo.getAutore().getUsername().equals(utenteCorrente.getUsername()) &&
                 !todo.getCondivisoCon().contains(utenteCorrente)) {
             throw new IllegalStateException("Non hai i permessi per modificare questo ToDo");
@@ -185,9 +196,11 @@ public class AppController {
     }
 
     public List<ToDo> cercaToDoPerTitolo(String titolo) {
-        return utenteCorrente.getListaToDo().stream()
-                .filter(todo -> todo.getTitoloToDo().contains(titolo))
-                .collect(Collectors.toList());
+        return new ArrayList<>(
+                utenteCorrente.getListaToDo().stream()
+                        .filter(todo -> todo.getTitoloToDo().contains(titolo))
+                        .toList()
+        );
     }
 
     public List<ToDo> getToDoInScadenzaEntro(LocalDate dataLimite) throws SQLException {
@@ -201,10 +214,11 @@ public class AppController {
         return result;
     }
 
-    // Aggiungi questo metodo alla classe AppController
     public List<ToDo> getToDoInScadenzaOggi() throws SQLException {
         LocalDate oggi = LocalDate.now();
-        List<ToDo> result = utenteCorrente.getToDoInScadenza(oggi);
+        // Usa getToDoInScadenzaEntro invece di getToDoInScadenza
+        List<ToDo> result = utenteCorrente.getToDoInScadenzaEntro(oggi);
+
         if (result.isEmpty()) {
             result = dao.getToDoInScadenzaEntro(utenteCorrente.getUsername(), oggi);
             for (ToDo t : result) {
@@ -218,7 +232,24 @@ public class AppController {
     // ==================== GESTIONE CONDIVISIONI ====================
     public void aggiungiCondivisione(ToDo todo, String username) throws SQLException {
         validaCondivisione(todo, username);
+
+        // Verifica che l'utente destinatario esista
         Utente destinatario = dao.getUtenteByUsername(username);
+        if (destinatario == null) {
+            throw new IllegalArgumentException("Utente destinatario non trovato");
+        }
+
+        // Assicurati che l'utente abbia le bacheche predefinite
+        if (!dao.haBachechePredefinite(username)) {
+            List<Bacheca> bacheche = Utente.inizializzaBacheche();
+            dao.salvaBachechePredefinite(bacheche, username);
+        }
+
+        // Controlla se il destinatario ha la bacheca specifica
+        boolean haBacheca = dao.utenteHaBacheca(username, todo.getBacheca());
+        if (!haBacheca) {
+            throw new IllegalStateException("L'utente destinatario non ha la bacheca '" + todo.getBacheca() + "'");
+        }
 
         dao.aggiungiCondivisione(todo, username);
         todo.aggiungiUtenteCondiviso(destinatario);
@@ -242,10 +273,10 @@ public class AppController {
         }
     }
 
-    private void autenticaUtente(String username, String password) throws Exception {
+    private void autenticaUtente(String username, String password) throws SQLException{
         utenteCorrente = dao.getUtenteByUsername(username);
         if (utenteCorrente == null || !utenteCorrente.getPassword().equals(password)) {
-            throw new Exception("Credenziali non valide");
+            throw new IllegalArgumentException("Credenziali non valide");
         }
     }
 
@@ -315,7 +346,7 @@ public class AppController {
         if (todo == null || username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("ToDo e username obbligatori");
         }
-        if (!todo.getAutore().equals(utenteCorrente)) {
+        if (!todo.getAutore().getUsername().equalsIgnoreCase(utenteCorrente.getUsername())) {
             throw new IllegalStateException("Solo l'autore può gestire le condivisioni");
         }
     }

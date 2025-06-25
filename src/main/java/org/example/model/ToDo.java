@@ -2,7 +2,6 @@ package org.example.model;
 
 import java.awt.*;
 import java.time.LocalDate;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.ArrayList;
 
@@ -10,10 +9,8 @@ public class ToDo {
     private Utente autore;
     private String url;
     private String titoloToDo;
-    private String sfondo;
     private String descrizioneToDo;
     private LocalDate dataScadenza;
-    private Bacheca bacheca;
     private StatoToDo statoToDo;
     private final List<Utente> condivisoCon=new ArrayList<>();
     private int id;
@@ -26,19 +23,18 @@ public class ToDo {
     public void setAutore(Utente autore){ this.autore=autore; }
     public void setUrl(String url){ this.url=url; }
     public void setTitoloToDo(String titoloToDo){ this.titoloToDo=titoloToDo; }
-    public void setSfondo(String sfondo){ this.sfondo=sfondo; }
     public void setColoreSfondo(Color coloreSfondo){this.coloreSfondo=coloreSfondo;}
     public void setDescrizioneToDo(String descrizioneToDo){ this.descrizioneToDo=descrizioneToDo; }
     public void setPercorsoImmagine(String percorsoImmagine) {
         this.percorsoImmagine = percorsoImmagine;
     }
+
     public void setBacheca(String titoloBacheca) {
         this.titoloBacheca = titoloBacheca;
-        // Aggiungi questa linea per sincronizzare l'oggetto Bacheca
-        if (this.autore != null) {
-            this.bacheca = this.autore.getBachecaByTitolo(titoloBacheca);
-        }
     }
+
+
+
 
     public void setStatoToDo(StatoToDo statoToDo){ this.statoToDo=statoToDo; }
 
@@ -90,30 +86,16 @@ public class ToDo {
         condivisoCon.remove(utente);
     }
 
-    public boolean verificaScadenzaOggi() {
-        if (dataScadenza == null) return false;
-        return dataScadenza.equals(LocalDate.now());
-    }
 
-    public void setDataScadenza(String dataScadenza) {
-        try {
-            this.dataScadenza = LocalDate.parse(dataScadenza);
-        } catch (DateTimeParseException e) {
-            e.printStackTrace();
-        }
+    public void setDataScadenza(LocalDate dataScadenza) {
+        this.dataScadenza = dataScadenza;
     }
 
     public String getPercorsoImmagine() {
         return percorsoImmagine;
     }
-
-
     public LocalDate getDataScadenza() {
         return dataScadenza;
-    }
-
-    public String getSfondo() {
-        return sfondo;
     }
 
     public String getUrl() {
@@ -131,5 +113,12 @@ public class ToDo {
     public void setOrdine(int ordine) {
         this.ordine=ordine;
     }
+
+    @Override
+    public String toString() {
+        String scad = (getDataScadenza() == null) ? "(Nessuna scadenza)" : "(Scadenza: " + getDataScadenza() + ")";
+        return getTitoloToDo() + " " + scad;
+    }
+
 }
 

@@ -12,6 +12,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class BachecaGUI {
@@ -29,6 +31,7 @@ public class BachecaGUI {
     private JButton btnAggiungiCondivisione;
     private JButton btnRimuoviCondivisione;
     private Bacheca b;
+    private static final Logger logger = Logger.getLogger(BachecaGUI.class.getName());
 
     public BachecaGUI(AppController controller, JFrame frameChiamante) throws SQLException {
         this.controller = controller;
@@ -49,7 +52,7 @@ public class BachecaGUI {
         aggiornaListaUtenti();
         aggiornaListaBacheche();
 
-        // 🔥 Gestione eventi direttamente nel costruttore
+        // Gestione eventi direttamente nel costruttore
         todoList.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
@@ -128,7 +131,7 @@ public class BachecaGUI {
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(frame, "Errore: " + ex.getMessage());
-            ex.printStackTrace();
+
         }
     }
 
@@ -142,7 +145,9 @@ public class BachecaGUI {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "Errore durante l'aggiornamento della lista utenti", e);
+            JOptionPane.showMessageDialog(frame, "Errore nel caricamento della lista utenti: " + e.getMessage(),
+                    "Errore", JOptionPane.ERROR_MESSAGE);
         }
     }
 

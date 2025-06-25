@@ -6,10 +6,7 @@ import java.util.List;
 public class Bacheca {
     private String titoloBacheca;
     private String descrizioneBacheca;
-
-    private List<String> listaCondivisioni;
-
-
+    private final List<String> listaCondivisioni;
 
     public Bacheca( String titoloBacheca, String descrizioneBacheca) {
         this.titoloBacheca = titoloBacheca;
@@ -17,7 +14,6 @@ public class Bacheca {
 
         this.listaCondivisioni= new ArrayList<>();
     }
-
 
     public List<String> getListaCondivisioni() {
         return listaCondivisioni;
@@ -27,12 +23,9 @@ public class Bacheca {
         return titoloBacheca;
     }
 
-
-
     public void setTitoloBacheca(String titoloBacheca) {
         this.titoloBacheca = titoloBacheca;
     }
-
 
     public String getDescrizioneBacheca() {
         return descrizioneBacheca;

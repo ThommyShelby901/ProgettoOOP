@@ -17,33 +17,33 @@ public interface DatabaseDAO {
     List<String> getListaUtenti() throws SQLException;
     void salvaBachechePredefinite(List<Bacheca> bacheche, String username) throws SQLException;
     boolean haBachechePredefinite(String username) throws SQLException;
+    boolean utenteHaBacheca(String username, String titoloBacheca) throws SQLException;
 
-    public List<ToDo> getToDoInScadenzaEntro(String username, LocalDate dataLimite) throws SQLException;
-    public List<ToDo> cercaToDoPerTitolo(String username, String titolo) throws SQLException;
-     List<ToDo> executeToDoQuery(PreparedStatement pstmt) throws SQLException;
-    public boolean isToDoSharedWithUser(int idToDo, String username) throws SQLException;
-    public String getAutoreToDo(int idToDo) throws SQLException;
-    public List<String> getCondivisioniPerToDo(int idToDo) throws SQLException;
+    List<ToDo> getToDoInScadenzaEntro(String username, LocalDate dataLimite) throws SQLException;
+    List<ToDo> executeToDoQuery(PreparedStatement pstmt) throws SQLException;
+    String getAutoreToDo(int idToDo) throws SQLException;
+    List<String> getCondivisioniPerToDo(int idToDo) throws SQLException;
 
 
     List<Bacheca> executeBachecaQuery(String query, String username) throws SQLException;
     Bacheca aggiungiBacheca(String titolo, String descrizione, String username)throws SQLException;
-    public void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione, String username);
-    public void eliminaBacheca(String titolo, String username) throws SQLException;
+    void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione, String username);
+    void eliminaBacheca(String titolo, String username) throws SQLException;
     List<Bacheca> getBachecheByUsername(String username) throws SQLException;
-    public List<ToDo> getToDoByUsername(String username) throws SQLException;
+    List<ToDo> getToDoByUsername(String username) throws SQLException;
 
 
     void aggiungiCondivisione(ToDo todo, String username) throws SQLException;
     void rimuoviCondivisione(ToDo todo, String username) throws SQLException;
     void creaToDo(ToDo todo, String titoloBacheca) throws SQLException;
-    ToDo getToDoByTitolo(String titolo) throws SQLException;
     List<ToDo> getTuttiToDo(String titoloBacheca, String username) throws SQLException;
     void aggiornaToDo(ToDo todo) throws SQLException;
     void eliminaToDo(String titolo, String titoloBacheca) throws SQLException;
     void trasferisciToDo(ToDo todo, String titoloBachecaDestinazione) throws SQLException;
     List<Bacheca> getListaBachecheDalDB(String username) throws SQLException;
-    public void aggiornaOrdineToDo(int idToDo, int nuovaPosizione) throws SQLException;
+    void aggiornaOrdineToDo(int idToDo, int nuovaPosizione) throws SQLException;
+
+
 }
 
 

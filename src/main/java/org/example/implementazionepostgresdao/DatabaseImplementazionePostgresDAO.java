@@ -8,22 +8,29 @@ import org.example.model.ToDo;
 import org.example.model.Utente;
 
 import java.awt.*;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     private final Connection connection;
-    private static final String COL_ID_TODO = "id_todo"; // 🔥 Costante a livello di classe
-    private static final String COL_DATA_SCADENZA = "data_scadenza";
+    private static final String COL_ID_TODO = "id_todo"; //  Costante a livello di classe
     private static final String COL_TITOLO = "titolo";
     private static final String COL_DESCRIZIONE = "descrizione";
     private static final String DEFAULT_COLOR_HEX = "#FFFFFF";
+    private static final String COL_PERCORSO_IMMAGINE = "percorso_immagine";
+    private static final String COL_COLORE_SFONDO_NOME = "colore_sfondo";
+    private static final String STATO = "stato";
+    private static final String USERNAME = "username";
+    private static final String DATA_SCADENZA = "data_scadenza";
+    private static final String COL_TITOLO_BACHECA = "titolo_bacheca";
+    private static final Logger logger = Logger.getLogger(DatabaseImplementazionePostgresDAO.class.getName());
+
+
 
     public DatabaseImplementazionePostgresDAO() throws SQLException {
         this.connection = ConnessioneDatabase.getInstance().connection;
@@ -67,7 +74,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         try (PreparedStatement pstmt = connection.prepareStatement("SELECT username, password FROM utente WHERE username = ?")) {
             pstmt.setString(1, username);
             ResultSet rs = pstmt.executeQuery();
-            return rs.next() ? new Utente(rs.getString("username"), rs.getString("password")) : null;
+            return rs.next() ? new Utente(rs.getString(USERNAME), rs.getString("password")) : null;
         }
     }
 
@@ -86,65 +93,63 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
 
+    private boolean isNullOrEmpty(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
     @Override
     public void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione, String username) {
-        if (titoloCorrente == null || titoloCorrente.trim().isEmpty() ||
-                nuovoTitolo == null || nuovoTitolo.trim().isEmpty() ||
-                nuovaDescrizione == null || nuovaDescrizione.trim().isEmpty() ||
-                username == null || username.trim().isEmpty()) {
+        if (isNullOrEmpty(titoloCorrente) || isNullOrEmpty(nuovoTitolo) || isNullOrEmpty(nuovaDescrizione) || isNullOrEmpty(username)) {
             return;
         }
 
         String query = "UPDATE bacheca SET titolo = ?, descrizione = ? WHERE titolo = ? AND username = ?";
-
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, nuovoTitolo);
-            pstmt.setString(2, nuovaDescrizione);
-            pstmt.setString(3, titoloCorrente);
-            pstmt.setString(4, username);
-            pstmt.executeUpdate();
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(1, nuovoTitolo);
+            stmt.setString(2, nuovaDescrizione);
+            stmt.setString(3, titoloCorrente);
+            stmt.setString(4, username);
+            stmt.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.WARNING, "Errore aggiornamento bacheca: " + e.getMessage(), e);
         }
+
+
+
     }
+
 
     @Override
     public void eliminaBacheca(String titolo, String username) throws SQLException {
-        if (titolo == null || titolo.trim().isEmpty() || username == null || username.trim().isEmpty()) {
+        if (isNullOrEmpty(titolo) || isNullOrEmpty(username)) {
             return;
         }
 
-        if (connection == null) return; // ✅ Controllo sulla connessione
-
         String query = "DELETE FROM bacheca WHERE titolo = ? AND username = ?";
-        PreparedStatement pstmt = connection.prepareStatement(query);
-        pstmt.setString(1, titolo);
-        pstmt.setString(2, username);
-        pstmt.executeUpdate();
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(1, titolo);
+            stmt.setString(2, username);
+            stmt.executeUpdate();
+        }
     }
-
-
 
     @Override
     public List<Bacheca> getListaBachecheDalDB(String username) throws SQLException {
-        String query = "SELECT titolo, descrizione FROM bacheca WHERE username = ?";
-        return executeBachecaQuery(query, username);
+        return getBachecheByUsername(username);
     }
 
-
-    @Override
     public void salvaBachechePredefinite(List<Bacheca> bacheche, String username) throws SQLException {
         String query = "INSERT INTO bacheca (titolo, descrizione, username) VALUES (?, ?, ?) " +
                 "ON CONFLICT (titolo, username) DO NOTHING";
 
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(3, username);
             for (Bacheca bacheca : bacheche) {
-                pstmt.setString(1, bacheca.getTitoloBacheca());
-                pstmt.setString(2, bacheca.getDescrizioneBacheca());
-                pstmt.setString(3, username); // Questo associa la bacheca all'utente
-                pstmt.addBatch();
+                stmt.setString(1, bacheca.getTitoloBacheca());
+                stmt.setString(2, bacheca.getDescrizioneBacheca());
+                stmt.addBatch();
             }
-            pstmt.executeBatch();
+            stmt.executeBatch();
         }
     }
 
@@ -152,62 +157,59 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     @Override
     public boolean haBachechePredefinite(String username) throws SQLException {
         String query = "SELECT COUNT(*) FROM bacheca WHERE username = ? AND titolo IN ('Università', 'Lavoro', 'Tempo Libero')";
-
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, username);
-            ResultSet rs = pstmt.executeQuery();
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
-                return rs.getInt(1) == 3;  // Devono esserci tutte e 3 le bacheche predefinite
+                int count = rs.getInt(1);
+                // Considera che l'utente abbia le bacheche predefinite se ne ha almeno una
+                return count > 0;
             }
+            return false;
         }
-        return false;
     }
 
     @Override
     public void aggiornaOrdineToDo(int idToDo, int nuovaPosizione) throws SQLException {
         String query = "UPDATE todo SET ordine = ? WHERE id_todo = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setInt(1, nuovaPosizione);
-            pstmt.setInt(2, idToDo);
-            pstmt.executeUpdate();
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setInt(1, nuovaPosizione);
+            stmt.setInt(2, idToDo);
+            stmt.executeUpdate();
         }
     }
 
-
     @Override
     public List<Bacheca> getBachecheByUsername(String username) throws SQLException {
-        String query = "SELECT titolo, descrizione FROM bacheca WHERE username = ?";
         List<Bacheca> bacheche = new ArrayList<>();
-
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, username);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                Bacheca nuovaBacheca = new Bacheca(
-                        rs.getString(COL_TITOLO),
-                        rs.getString(COL_DESCRIZIONE)
-                );
-                bacheche.add(nuovaBacheca);
+        String query = "SELECT titolo, descrizione FROM bacheca WHERE username = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(1, username);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    bacheche.add(new Bacheca(
+                            rs.getString(COL_TITOLO),
+                            rs.getString(COL_DESCRIZIONE)
+                    ));
+                }
             }
         }
         return bacheche;
     }
 
-
     @Override
     public List<String> getListaUtenti() throws SQLException {
         List<String> utenti = new ArrayList<>();
         String query = "SELECT username FROM utente";
-
-        try (PreparedStatement pstmt = connection.prepareStatement(query);
-             ResultSet rs = pstmt.executeQuery()) {
+        try (PreparedStatement stmt = connection.prepareStatement(query);
+             ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                utenti.add(rs.getString("username")); // 🔥 Recupera tutti gli utenti
+                utenti.add(rs.getString(USERNAME));
             }
         }
         return utenti;
     }
+
 
     @Override
     public void aggiungiCondivisione(ToDo todo, String nomeUtente) throws SQLException {
@@ -280,51 +282,15 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         }
     }
 
-    private String colorToHex(Color color) {
-        if (color == null) {
-            return DEFAULT_COLOR_HEX;
-        }
-        return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
-    }
 
-
-    @Override
-    public ToDo getToDoByTitolo(String titolo) throws SQLException {
-        String query = "SELECT id_todo, titolo, descrizione, data_scadenza, colore_sfondo, percorso_immagine FROM todo WHERE titolo = ?";
-
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, titolo);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                ToDo todo = new ToDo();
-                todo.setId(rs.getInt(COL_ID_TODO));
-                todo.setTitoloToDo(rs.getString(COL_TITOLO));
-                todo.setDescrizioneToDo(rs.getString(COL_DESCRIZIONE));
-
-                if (rs.getDate(COL_DATA_SCADENZA) != null) {
-                    todo.setDataScadenza(rs.getDate(COL_DATA_SCADENZA).toLocalDate().toString());
-                }
-
-                // Aggiungi il colore
-                String coloreHex = rs.getString("colore_sfondo");
-                todo.setColoreSfondo(coloreHex != null ? Color.decode(coloreHex) : Color.WHITE);
-
-                // Aggiungi il percorso dell'immagine
-                todo.setPercorsoImmagine(rs.getString("percorso_immagine"));
-
-                return todo;
-            }
-        }
-        return null;
-    }
 
     @Override
     public List<ToDo> getTuttiToDo(String titoloBacheca, String username) throws SQLException {
-        String query = "SELECT t.id_todo, t.titolo, t.descrizione, t.data_scadenza, t.url, t.stato, t.username, t.colore_sfondo, t.percorso_immagine " +
+        String query = "SELECT t.id_todo, t.titolo, t.descrizione, t.data_scadenza, t.url, t.stato, t.username, t.colore_sfondo, t.percorso_immagine, t.titolo_bacheca, t.ordine " +
                 "FROM todo t " +
                 "WHERE t.titolo_bacheca = ? AND (t.username = ? OR EXISTS " +
                 "(SELECT 1 FROM condivisione c WHERE c.id_todo = t.id_todo AND c.username = ?))";
+
 
         List<ToDo> listaToDo = new ArrayList<>();
 
@@ -336,34 +302,19 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                ToDo todo = new ToDo();
-                todo.setId(rs.getInt("id_todo"));
-                todo.setTitoloToDo(rs.getString("titolo"));
-                todo.setDescrizioneToDo(rs.getString("descrizione"));
-
-                if (rs.getDate("data_scadenza") != null) {
-                    todo.setDataScadenza(rs.getDate("data_scadenza").toLocalDate().toString());
-                }
-
-                todo.setUrl(rs.getString("url"));
-                todo.setStatoToDo(StatoToDo.valueOf(rs.getString("stato")));
-                todo.setPercorsoImmagine(rs.getString("percorso_immagine")); // Aggiungi questa linea
-
-                // Aggiungi questa parte per il colore
-                String coloreHex = rs.getString("colore_sfondo");
-                todo.setColoreSfondo(coloreHex != null ? Color.decode(coloreHex) : Color.WHITE);
-
-                String autoreUsername = rs.getString("username");
-                if (autoreUsername != null) {
-                    Utente autore = this.getUtenteByUsername(autoreUsername);
-                    todo.setAutore(autore);
-                }
-
-                todo.setBacheca(titoloBacheca);
+                ToDo todo = estraiToDoDaResultSet(rs);
+                todo.setBacheca(titoloBacheca); // <-- qui lo imposti manualmente
                 listaToDo.add(todo);
             }
         }
         return listaToDo;
+    }
+
+    private String colorToHex(Color color) {
+        if (color == null) {
+            return DEFAULT_COLOR_HEX;
+        }
+        return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
     }
 
     @Override
@@ -391,7 +342,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     @Override
     public void aggiornaToDo(ToDo todo) throws SQLException {
         String query = "UPDATE todo SET titolo = ?, descrizione = ?, data_scadenza = ?, " +
-                "colore_sfondo = ?, percorso_immagine = ? WHERE id_todo = ?";
+                "colore_sfondo = ?, percorso_immagine = ?, ordine = ? WHERE id_todo = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, todo.getTitoloToDo());
@@ -400,7 +351,8 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
                     java.sql.Date.valueOf(todo.getDataScadenza()) : null);
             pstmt.setString(4, colorToHex(todo.getColoreSfondo()));
             pstmt.setString(5, todo.getPercorsoImmagine());
-            pstmt.setInt(6, todo.getId());
+            pstmt.setInt(6, todo.getOrdine());  // Aggiunto campo ordine
+            pstmt.setInt(7, todo.getId());
             pstmt.executeUpdate();
         }
     }
@@ -408,46 +360,23 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     @Override
     public List<ToDo> getToDoByUsername(String username) throws SQLException {
         List<ToDo> listaToDo = new ArrayList<>();
-        String query = "SELECT id_todo, titolo, descrizione, data_scadenza, url, stato, titolo_bacheca, username, colore_sfondo, percorso_immagine " +
+        String query = "SELECT id_todo, titolo, descrizione, data_scadenza, url, stato, titolo_bacheca, username, colore_sfondo, percorso_immagine, ordine " +  // Aggiunto spazio
                 "FROM todo WHERE username = ? OR id_todo IN " +
                 "(SELECT id_todo FROM condivisione WHERE username = ?)";
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, username);
             pstmt.setString(2, username);
-            ResultSet rs = pstmt.executeQuery();
 
-            while (rs.next()) {
-                ToDo todo = new ToDo();
-                todo.setId(rs.getInt("id_todo"));
-                todo.setTitoloToDo(rs.getString("titolo"));
-                todo.setDescrizioneToDo(rs.getString("descrizione"));
-
-                if (rs.getDate("data_scadenza") != null) {
-                    todo.setDataScadenza(rs.getDate("data_scadenza").toLocalDate().toString());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    listaToDo.add(estraiToDoDaResultSet(rs));
                 }
-
-                todo.setUrl(rs.getString("url"));
-                todo.setStatoToDo(StatoToDo.valueOf(rs.getString("stato")));
-                todo.setBacheca(rs.getString("titolo_bacheca"));
-                todo.setPercorsoImmagine(rs.getString("percorso_immagine")); // Aggiungi questa linea
-
-                // Aggiunta del colore di sfondo
-                String coloreHex = rs.getString("colore_sfondo");
-                todo.setColoreSfondo(coloreHex != null ? Color.decode(coloreHex) : Color.WHITE);
-
-                // Carica sempre l'utente completo come autore
-                String autoreUsername = rs.getString("username");
-                if (autoreUsername != null) {
-                    Utente autore = getUtenteByUsername(autoreUsername);
-                    todo.setAutore(autore);
-                }
-
-                listaToDo.add(todo);
             }
         }
         return listaToDo;
     }
+
 
     @Override
     public List<String> getCondivisioniPerToDo(int idToDo) throws SQLException {
@@ -457,7 +386,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             pstmt.setInt(1, idToDo);
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()) {
-                condivisioni.add(rs.getString("username"));
+                condivisioni.add(rs.getString(USERNAME));
             }
         }
         return condivisioni;
@@ -469,21 +398,9 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setInt(1, idToDo);
             ResultSet rs = pstmt.executeQuery();
-            return rs.next() ? rs.getString("username") : null;
+            return rs.next() ? rs.getString(USERNAME) : null;
         }
     }
-
-    @Override
-    public boolean isToDoSharedWithUser(int idToDo, String username) throws SQLException {
-        String query = "SELECT COUNT(*) FROM condivisione WHERE id_todo = ? AND username = ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setInt(1, idToDo);
-            pstmt.setString(2, username);
-            ResultSet rs = pstmt.executeQuery();
-            return rs.next() && rs.getInt(1) > 0;
-        }
-    }
-
 
     @Override
     public void eliminaToDo(String titolo, String titoloBacheca) throws SQLException {
@@ -493,6 +410,17 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             pstmt.setString(1, titolo);
             pstmt.setString(2, titoloBacheca); // 🔥 Ora passiamo direttamente il titolo della bacheca!
             pstmt.executeUpdate();
+        }
+    }
+
+    @Override
+    public boolean utenteHaBacheca(String username, String titoloBacheca) throws SQLException {
+        String query = "SELECT COUNT(*) FROM bacheca WHERE username = ? AND titolo = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(query)) {
+            stmt.setString(1, username);
+            stmt.setString(2, titoloBacheca);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next() && rs.getInt(1) > 0;
         }
     }
 
@@ -517,7 +445,8 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
 
     @Override
     public List<ToDo> getToDoInScadenzaEntro(String username, LocalDate dataLimite) throws SQLException {
-        String query = "SELECT * FROM todo WHERE username = ? AND data_scadenza <= ?";
+        String query = "SELECT id_todo, titolo, descrizione, data_scadenza, url, stato, colore_sfondo, percorso_immagine, ordine " +
+                "FROM todo WHERE username = ? AND data_scadenza <= ?";
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, username);
             pstmt.setDate(2, java.sql.Date.valueOf(dataLimite));
@@ -525,49 +454,49 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         }
     }
 
-    @Override
-    public List<ToDo> cercaToDoPerTitolo(String username, String titolo) throws SQLException {
-        String query = "SELECT * FROM todo WHERE username = ? AND LOWER(titolo) LIKE ?";
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            pstmt.setString(1, username);
-            String likePattern = "%" + titolo.toLowerCase() + "%";
-            pstmt.setString(2, likePattern);
-            return executeToDoQuery(pstmt);
-        }
-    }
+
 
     @Override
     public List<ToDo> executeToDoQuery(PreparedStatement pstmt) throws SQLException {
         List<ToDo> result = new ArrayList<>();
         try (ResultSet rs = pstmt.executeQuery()) {
             while (rs.next()) {
-                ToDo todo = new ToDo();
-                todo.setId(rs.getInt("id_todo"));
-                todo.setTitoloToDo(rs.getString("titolo"));
-                todo.setDescrizioneToDo(rs.getString("descrizione"));
-
-                if (rs.getDate("data_scadenza") != null) {
-                    todo.setDataScadenza(rs.getDate("data_scadenza").toLocalDate().toString());
+                result.add(estraiToDoDaResultSet(rs));
                 }
-
-                todo.setUrl(rs.getString("url"));
-                todo.setStatoToDo(StatoToDo.valueOf(rs.getString("stato")));
-                todo.setBacheca(rs.getString("titolo_bacheca"));
-                todo.setPercorsoImmagine(rs.getString("percorso_immagine")); // Aggiungi questa linea
-
-                // Carica il colore di sfondo se presente
-                String coloreHex = rs.getString("colore_sfondo");
-                todo.setColoreSfondo(coloreHex != null ? Color.decode(coloreHex) : Color.WHITE);
-
-                String username = rs.getString("username");
-                if (username != null) {
-                    Utente autore = this.getUtenteByUsername(username);
-                    todo.setAutore(autore);
-                }
-
-                result.add(todo);
-            }
         }
         return result;
     }
+
+    private ToDo estraiToDoDaResultSet(ResultSet rs) throws SQLException {
+        ToDo todo = new ToDo();
+        todo.setId(rs.getInt(COL_ID_TODO));
+        todo.setTitoloToDo(rs.getString(COL_TITOLO));
+        todo.setDescrizioneToDo(rs.getString(COL_DESCRIZIONE));
+
+
+        Date dataScadenza = rs.getDate(DATA_SCADENZA);
+        if (dataScadenza != null) {
+            todo.setDataScadenza(dataScadenza.toLocalDate());
+        } else {
+            todo.setDataScadenza(null);
+        }
+
+        todo.setUrl(rs.getString("url"));
+        todo.setStatoToDo(StatoToDo.valueOf(rs.getString(STATO)));
+        todo.setBacheca(rs.getString(COL_TITOLO_BACHECA ));
+        todo.setOrdine(rs.getInt("ordine"));
+        todo.setPercorsoImmagine(rs.getString(COL_PERCORSO_IMMAGINE));
+
+        String coloreHex = rs.getString(COL_COLORE_SFONDO_NOME);
+        todo.setColoreSfondo(coloreHex != null ? Color.decode(coloreHex) : Color.WHITE);
+
+        String username = rs.getString(USERNAME);
+        if (username != null) {
+            Utente autore = getUtenteByUsername(username);
+            todo.setAutore(autore);
+        }
+
+        return todo;
+    }
+
 }

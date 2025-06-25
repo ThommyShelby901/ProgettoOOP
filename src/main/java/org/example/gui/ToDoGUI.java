@@ -9,32 +9,35 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 public class ToDoGUI {
 
     /* GUI (creata dal .form) ------------------------------------------------ */
     private JPanel todoPanel;
-    private JList<String> todoList;
+    private JList<ToDo> todoList;
     JScrollPane scroll;
     private JButton btnAggiungiToDo;
     private JButton btnModificaToDo;
     private JButton btnEliminaToDo;
     private JButton btnIndietro;
     private JButton btnTrasferisci;
-    private JButton btnSpostaToDo;
+    private JButton spostaButton;
     private JButton btnVediCondivisioni;
     private JButton btnVisualizzaToDo;
     private JButton btnAggiungiImmagine;
+
 
     /* campi non‑GUI --------------------------------------------------------- */
     private final JFrame frame;
     JFrame frameChiamante;
     private final AppController controller;
     private final String titoloBacheca;
-    private final DefaultListModel<String> modello = new DefaultListModel<>();
+    private final DefaultListModel<ToDo> modello = new DefaultListModel<>();
 
     /* costruttore ----------------------------------------------------------- */
     public ToDoGUI(AppController controller, JFrame frameChiamante, String titoloBacheca) {
@@ -55,7 +58,7 @@ public class ToDoGUI {
         btnAggiungiToDo.addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) { creaToDo(); }});
         btnModificaToDo.addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) { modificaToDo(); }});
         btnEliminaToDo .addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) { eliminaToDo(); }});
-        btnSpostaToDo  .addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) { spostaToDo(); }});
+        spostaButton.addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) { spostaToDo(); }});
         btnTrasferisci .addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) { trasferisciToDo(); }});
         btnVediCondivisioni.addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) { apriGestioneCondivisioni(); }});
         btnVisualizzaToDo.addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) { visualizzaDettagli(); }});
@@ -68,116 +71,151 @@ public class ToDoGUI {
         frame.setVisible(true);
     }
 
-    /* ====================== CRUD principali ================================= */
+    private void aggiornaLista() {
+        modello.clear();
+        try {
+            List<ToDo> lista = controller.getToDoPerBacheca(titoloBacheca);
+            for (ToDo t : lista) {
+                modello.addElement(t);
+            }
+        } catch (SQLException ex) {
+            errore(ex);
+        }
+        frame.revalidate();
+        frame.repaint();
+    }
+
+
+    private ToDo toDoSelezionato() {
+        ToDo t = todoList.getSelectedValue();
+        if (t == null) {
+            info("Seleziona un To‑Do.");
+            return null;
+        }
+        return t;
+    }
+
+
+    /* ====== CRUD ====== */
 
     private void creaToDo() {
-        Optional<DatiToDo> o = dialogCreaModifica(null);
-        if (!o.isPresent()) return;
+        // Richiedo input
+        String titolo = getInput("Titolo:", "", true);
+        if (titolo == null) return;
+        String descr = getInput("Descrizione:", "", true);
+        if (descr == null) return;
+        String dataStr = getInput("Scadenza yyyy-MM-dd (opzionale):", "", false);
+        LocalDate dataScad = parseDate(dataStr);
+        String url = getInput("URL (opzionale):", "", false);
+        StatoToDo stato = getStatoFromDialog();
+        Color colore = getColorFromDialog();
 
-        DatiToDo d = o.get();
         try {
-            controller.creaToDo(d.titolo, d.descrizione, d.dataScadenza, d.url,
-                    d.stato, titoloBacheca, d.colore);
+            controller.creaToDo(titolo, descr, dataScad, url, stato, titoloBacheca, colore);
             aggiornaLista();
-            info("To‑Do creato con successo.");
-        } catch (SQLException ex) { errore(ex); }
+            info("To‑Do creato.");
+        } catch (SQLException ex) {
+            errore(ex);
+        }
     }
 
     private void modificaToDo() {
-        Optional<ToDo> toSel = selezionato();
-        if (!toSel.isPresent()) return;
+        ToDo t = toDoSelezionato();
+        if (t == null) return;
+        String titolo = getInput("Titolo:", t.getTitoloToDo(), true);
+        if (titolo == null) return;
+        String descr = getInput("Descrizione:", t.getDescrizioneToDo(), true);
+        if (descr == null) return;
+        String dataStr = getInput("Scadenza yyyy-MM-dd (opzionale):",
+                t.getDataScadenza() != null ? t.getDataScadenza().toString() : "", false);
+        LocalDate dataScad = parseDate(dataStr);
+        String url = getInput("URL (opzionale):", t.getUrl(), false);
+        StatoToDo stato = getStatoFromDialog();
 
-        Optional<DatiToDo> o = dialogCreaModifica(toSel.get());
-        if (!o.isPresent()) return;
-
-        DatiToDo d = o.get();
         try {
-            // Rimossa la passaggio dell'utente corrente
-            controller.modificaToDo(toSel.get(), d.titolo, d.descrizione,
-                    d.dataScadenza, d.url, d.stato);
+            controller.modificaToDo(t, titolo, descr, dataScad, url, stato);
             aggiornaLista();
             info("To‑Do modificato.");
-        } catch (Exception ex) { errore(ex); }
+        } catch (SQLException ex) {
+            errore(ex);
+        }
     }
 
     private void eliminaToDo() {
-        Optional<ToDo> toSel = selezionato();
-        if (!toSel.isPresent()) return;
-
+        ToDo t = toDoSelezionato();
+        if (t == null) return;
         int ok = JOptionPane.showConfirmDialog(frame,
-                "Eliminare il To‑Do \"" + toSel.get().getTitoloToDo() + "\"?",
-                "Conferma", JOptionPane.YES_NO_OPTION);
-        if (ok != JOptionPane.YES_OPTION) return;
-
-        try {
-            controller.eliminaToDo(toSel.get().getTitoloToDo(), titoloBacheca);
-            aggiornaLista();
-            info("To‑Do eliminato.");
-        } catch (SQLException ex) { errore(ex); }
+                "Eliminare il To‑Do \"" + t.getTitoloToDo() + "\"?", "Conferma", JOptionPane.YES_NO_OPTION);
+        if (ok == JOptionPane.YES_OPTION) {
+            try {
+                controller.eliminaToDo(t.getTitoloToDo(), titoloBacheca);
+                aggiornaLista();
+                info("To‑Do eliminato.");
+            } catch (SQLException ex) {
+                errore(ex);
+            }
+        }
     }
 
-    /* ====================== azioni extra =================================== */
+    /* ====== Extra ====== */
 
     private void spostaToDo() {
-        Optional<ToDo> sel = selezionato();
-        if (!sel.isPresent()) return;
-
-        String posStr = JOptionPane.showInputDialog(frame,
-                "Nuova posizione (1-" + modello.size() + "):");
+        ToDo t = toDoSelezionato();
+        if (t == null) return;
         try {
-            int nuovaPos = Integer.parseInt(posStr) - 1;
-            controller.spostaToDo(titoloBacheca, sel.get().getTitoloToDo(), nuovaPos);
+            List<ToDo> todos = controller.getToDoPerBacheca(titoloBacheca);
+            if (todos.size() <= 1) { info("Pochi To‑Do per spostare."); return; }
+            int attuale = todos.indexOf(t) + 1;
+            String in = getInput("Nuova posizione (1-" + todos.size() + "):", String.valueOf(attuale), true);
+            if (in == null) return;
+            int nuova = Integer.parseInt(in);
+            if (nuova < 1 || nuova > todos.size()) { info("Posizione non valida."); return; }
+            controller.spostaToDo(titoloBacheca, t.getTitoloToDo(), nuova - 1);
             aggiornaLista();
-            info("To‑Do spostato.");
-        } catch (Exception ex) { errore(ex); }
+            info("Spostato in posizione " + nuova);
+        } catch (Exception ex) {
+            errore(ex);
+        }
     }
 
     private void trasferisciToDo() {
-        Optional<ToDo> sel = selezionato();
-        if (!sel.isPresent()) return;
-
-        String dest = JOptionPane.showInputDialog(frame, "Nuova bacheca di destinazione:");
-        if (dest == null || dest.trim().isEmpty()) return;
-
+        ToDo t = toDoSelezionato();
+        if (t == null) return;
+        String dest = getInput("Bacheca destinazione:", "", true);
+        if (dest == null) return;
         try {
-            controller.trasferisciToDo(sel.get(), dest.trim());
+            controller.trasferisciToDo(t, dest);
             aggiornaLista();
             info("To‑Do trasferito.");
-        } catch (Exception ex) { errore(ex); }
-    }
-
-    private void visualizzaDettagli() {
-        Optional<ToDo> sel = selezionato();
-        if (!sel.isPresent()) return;
-
-        // Apre la finestra di dialogo personalizzata invece di usare JOptionPane
-        new VisualizzaToDoDialog(frame, sel.get(), controller);
+        } catch (Exception ex) {
+            errore(ex);
+        }
     }
 
     private void aggiungiImmagine() {
-        Optional<ToDo> sel = selezionato();
-        if (!sel.isPresent()) return;
-
+        ToDo t = toDoSelezionato();
+        if (t == null) return;
         JFileChooser fc = new JFileChooser();
-        fc.setFileFilter(new FileNameExtensionFilter("Immagini", "jpg","jpeg","png","gif"));
-        if (fc.showOpenDialog(frame) != JFileChooser.APPROVE_OPTION) return;
-
-        try {
-            controller.aggiungiImmagineAToDo(sel.get(), fc.getSelectedFile().getAbsolutePath());
-            info("Immagine aggiunta.");
-        } catch (SQLException ex) { errore(ex); }
+        fc.setFileFilter(new FileNameExtensionFilter("Immagini", "jpg","png","gif"));
+        if (fc.showOpenDialog(frame) == JFileChooser.APPROVE_OPTION) {
+            try {
+                controller.aggiungiImmagineAToDo(t, fc.getSelectedFile().getAbsolutePath());
+                info("Immagine aggiunta.");
+            } catch (SQLException ex) {
+                errore(ex);
+            }
+        }
     }
 
-    /* apri gestione condivisioni in BachecaGUI ------------------------------ */
     private void apriGestioneCondivisioni() {
         frame.setVisible(false);
         try {
-            BachecaGUI bachecaGUI = new BachecaGUI(controller, frame);
-            bachecaGUI.getBoardList().setSelectedValue(titoloBacheca, true);
-            bachecaGUI.aggiornaListaToDo(titoloBacheca);
-            bachecaGUI.getFrame().addWindowListener(new java.awt.event.WindowAdapter() {
+            BachecaGUI b = new BachecaGUI(controller, frame);
+            b.getBoardList().setSelectedValue(titoloBacheca, true);
+            b.aggiornaListaToDo(titoloBacheca);
+            b.getFrame().addWindowListener(new WindowAdapter() {
                 @Override
-                public void windowClosed(java.awt.event.WindowEvent e) {
+                public void windowClosed(WindowEvent e) {
                     frame.setVisible(true);
                     aggiornaLista();
                 }
@@ -188,77 +226,41 @@ public class ToDoGUI {
         }
     }
 
-    /* ====================== helper comuni ================================= */
-
-    /** Mostra finestre di input per creare o modificare un To‑Do. */
-    private Optional<DatiToDo> dialogCreaModifica(ToDo originale) {
-        String tInit  = originale != null ? originale.getTitoloToDo()       : "";
-        String dInit  = originale != null ? originale.getDescrizioneToDo()  : "";
-        String dsInit = originale != null ? String.valueOf(originale.getDataScadenza()) : "";
-        String uInit  = originale != null ? originale.getUrl()              : "";
-
-        String titolo = JOptionPane.showInputDialog(frame, "Titolo:", tInit);
-        if (titolo == null || titolo.trim().isEmpty()) return Optional.empty();
-
-        String descr  = JOptionPane.showInputDialog(frame, "Descrizione:", dInit);
-        if (descr == null || descr.trim().isEmpty()) return Optional.empty();
-
-        String dataScad = JOptionPane.showInputDialog(frame,
-                "Data scadenza (AAAA-MM-GG):", dsInit);
-        if (dataScad != null && dataScad.trim().isEmpty()) dataScad = null;
-
-        String url = JOptionPane.showInputDialog(frame, "URL (opzionale):", uInit);
-        if (url != null && url.trim().isEmpty()) url = null;
-
-        StatoToDo stato = JOptionPane.showConfirmDialog(frame,
-                "Il To‑Do è completato?", "Stato",
-                JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION
-                ? StatoToDo.COMPLETATO : StatoToDo.NONCOMPLETATO;
-
-        Color colore = JColorChooser.showDialog(frame, "Colore di sfondo (opzionale)", Color.WHITE);
-
-        return Optional.of(new DatiToDo(titolo.trim(), descr.trim(), dataScad, url,
-                stato, colore));
-    }
-
-    private Optional<ToDo> selezionato() {
-        String sel = todoList.getSelectedValue();
-        if (sel == null) {
-            info("Seleziona un To‑Do.");
-            return Optional.empty();
+    private void visualizzaDettagli() {
+        ToDo t = toDoSelezionato();
+        if (t != null) {
+            new VisualizzaToDoDialog(frame, t, controller);
         }
-        String titolo = sel.replaceFirst("^\\d+\\.\\s*", "").replaceFirst("\\s*\\(Scadenza.*$", "").trim();
-        return Optional.ofNullable(controller.getToDoPerTitoloEBoard(titolo, titoloBacheca));
     }
 
-    private void aggiornaLista() {
-        modello.clear();
-        try {
-            List<ToDo> lista = controller.getToDoPerBacheca(titoloBacheca); // Cambiato da getTuttiToDo
-            int idx = 1;
-            for (ToDo t : lista) {
-                String scad = (t.getDataScadenza() == null) ? "(Nessuna scadenza)"
-                        : "(Scadenza: " + t.getDataScadenza() + ")";
-                modello.addElement(idx++ + ". " + t.getTitoloToDo() + " " + scad);
-            }
-        } catch (SQLException ex) { errore(ex); }
-        frame.revalidate();
-        frame.repaint();
+    /* ====== Utility ====== */
+
+    private String getInput(String msg, String init, boolean req) {
+        String s = JOptionPane.showInputDialog(frame, msg, init);
+        if (s == null || (req && s.trim().isEmpty())) return null;
+        return s.trim();
     }
 
-    private void info(String msg)  { JOptionPane.showMessageDialog(frame, msg, "Info", JOptionPane.INFORMATION_MESSAGE); }
-    private void errore(Exception e){ JOptionPane.showMessageDialog(frame, e.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE); }
+    private LocalDate parseDate(String ds) {
+        if (ds == null || ds.isEmpty()) return null;
+        try { return LocalDate.parse(ds); }
+        catch (Exception _) { JOptionPane.showMessageDialog(frame, "Data non valida."); return null; }
+    }
 
-    /* semplice contenitore per i dati raccolti ----------------------------- */
-    private static class DatiToDo {
-        final String titolo;
-        final String descrizione;
-        final String dataScadenza;
-        final String url;
-        final StatoToDo stato;
-        final Color colore;
-        DatiToDo(String t, String d, String ds, String u, StatoToDo s, Color c) {
-            titolo=t; descrizione=d; dataScadenza=ds; url=u; stato=s; colore=c;
-        }
+    private StatoToDo getStatoFromDialog() {
+        return JOptionPane.showConfirmDialog(frame, "Completato?", "", JOptionPane.YES_NO_OPTION)
+                == JOptionPane.YES_OPTION ? StatoToDo.COMPLETATO : StatoToDo.NONCOMPLETATO;
+    }
+
+    private Color getColorFromDialog() {
+        return JColorChooser.showDialog(frame, "Colore di sfondo", Color.WHITE);
+    }
+
+    private void info(String m) {
+        JOptionPane.showMessageDialog(frame, m, "Info", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void errore(Exception e) {
+        JOptionPane.showMessageDialog(frame, e.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
     }
 }

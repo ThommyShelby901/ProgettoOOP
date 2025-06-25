@@ -7,6 +7,8 @@ import javax.swing.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 public class HomeFrame {
@@ -23,6 +25,7 @@ public class HomeFrame {
     private JButton btnEliminaBacheca;
     private JButton visualizzaButton;
     private JButton btnCercaToDo;
+    private static final Logger logger = Logger.getLogger(HomeFrame.class.getName());
 
     public HomeFrame(AppController controller, JFrame frameChiamante) {
         this.controller = controller;
@@ -59,7 +62,7 @@ public class HomeFrame {
                 try {
                     creaBacheca();
                 } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
+                    throw new IllegalStateException("Errore creazione bacheca", ex);
                 }
             }
         });
@@ -67,13 +70,10 @@ public class HomeFrame {
         btnModificaBacheca.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                try {
-                    modificaBacheca();
-                } catch (SQLException ex) {
-                    throw new RuntimeException(ex);
-                }
+                modificaBacheca();
             }
         });
+
 
         btnEliminaBacheca.addActionListener(new ActionListener() {
             @Override
@@ -116,7 +116,7 @@ public class HomeFrame {
         }
     }
 
-    private void modificaBacheca() throws SQLException {
+    private void modificaBacheca() {
         String selezionata = boardList.getSelectedValue();
         if (selezionata != null) {
             String nuovoTitolo = JOptionPane.showInputDialog(frame, "Modifica il titolo della bacheca:");
@@ -129,6 +129,7 @@ public class HomeFrame {
         }
     }
 
+
     private void eliminaBacheca() {
         String selezionata = boardList.getSelectedValue();
         if (selezionata != null) {
@@ -137,8 +138,9 @@ public class HomeFrame {
                 aggiornaListaBacheche();
             } catch (SQLException ex) {
                 JOptionPane.showMessageDialog(frame, "Errore durante l'eliminazione: " + ex.getMessage());
-                ex.printStackTrace();
+                logger.log(Level.SEVERE, "Errore durante l'eliminazione della bacheca", ex);
             }
+
         }
     }
 
@@ -164,7 +166,7 @@ public class HomeFrame {
             dialog.mostra();
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(frame, "Errore durante la ricerca: " + ex.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
+            logger.log(Level.SEVERE, "Errore durante la ricerca ToDo", ex);
         }
         frame.setVisible(true);
     }
@@ -175,13 +177,9 @@ public class HomeFrame {
             for (Bacheca board : controller.getListaBachecheAggiornate()) {
                 boardListModel.addElement(board.getTitoloBacheca());
             }
-        } catch (SQLException ex) {
+        } catch (SQLException _) {
             JOptionPane.showMessageDialog(frame, "Errore nel recupero delle bacheche dal database!");
         }
-    }
-
-    public void getAggiornaListaBacheche() {
-        aggiornaListaBacheche();
     }
 
     public JFrame getFrame() {

@@ -9,33 +9,22 @@ import java.sql.SQLException;
 
 public class Main {
     public static void main(String[] args) {
-        // Inizializzazione utenti demo (solo per sviluppo)
-        initializeDemoUsers();
-
-        SwingUtilities.invokeLater(() -> {
-            try {
-                DatabaseDAO dao = new DatabaseImplementazionePostgresDAO();
-                // Prima crea il LoginFrame senza controller
-                LoginFrame loginFrame = new LoginFrame();
-                // Poi crea il controller passando il loginFrame
-                AppController controller = new AppController(dao, loginFrame);
-                // Infine imposta il controller nel loginFrame
-                loginFrame.setController(controller);
-            } catch (SQLException e) {
-                JOptionPane.showMessageDialog(null, "Errore di connessione al database: " + e.getMessage());
-                System.exit(1);
-            }
-        });
-    }
-
-    private static void initializeDemoUsers() {
         try {
             DatabaseDAO dao = new DatabaseImplementazionePostgresDAO();
-            if (!dao.utenteEsiste("mario")) dao.aggiungiUtente("mario", "1234");
-            if (!dao.utenteEsiste("luigi")) dao.aggiungiUtente("luigi", "5678");
-            if (!dao.utenteEsiste("peach")) dao.aggiungiUtente("peach", "91011");
+
+            // Crea il LoginFrame
+            LoginFrame loginFrame = new LoginFrame();
+
+            // Crea il controller
+            AppController controller = new AppController(dao, loginFrame);
+
+            // Imposta il controller nel LoginFrame
+            loginFrame.setController(controller);
+
         } catch (SQLException e) {
-            System.err.println("Errore nell'inizializzazione degli utenti demo: " + e.getMessage());
+            // Mostra un messaggio di errore se la connessione fallisce
+            JOptionPane.showMessageDialog(null, "Errore di connessione al database: " + e.getMessage());
+            System.exit(1);
         }
     }
 }
