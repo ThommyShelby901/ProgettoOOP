@@ -1,6 +1,6 @@
 package org.example.gui;
 
-import org.example.controller.AppController;
+import org.example.controller.Controller;
 import org.example.model.Bacheca;
 import org.example.model.ToDo;
 import org.example.model.Utente;
@@ -16,27 +16,56 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class BachecaGUI {
+/**
+ * Questa classe gestisce l'interfaccia utente per le condivisioni con altri utenti. Ci permette di visualizzare una bacheca corrente,
+ * i to-do al suo interno e la lista degli utente registrati con cui poter condividere un to-do.
+ * Interagisce con il controller come per il resto delle gui seguendo il pattern bce+dao e facendo in modo che il controller,
+ * gestisca la logica del programma.
+ */
+public class GuiCondivisioni {
+    /** Componente che rende scorrevole la lista degli utenti*/
     JScrollPane scrollPaneUtenti;
+    /** frame principale di questa finestra*/
     private final JFrame frame;
+    /** frame della finestra chiamante, a cui si ritornerà nel caso questa finestra principale venga chiusa*/
     final JFrame frameChiamante;
-    private final AppController controller;
+    /** Istanza del controller che gestisce la logica*/
+    private final Controller controller;
+    /** pannello principale che contiene tutti gli elementi della gui*/
     private JPanel bachecaPanel;
+    /** lista che visualizza i to-do della bacheca selezionata*/
     private JList<String> todoList;
+    /** lista che visualizza le bacheche disponibili per la selezione*/
     private JList<String> boardList;
+    /** DefaultListModel che gestisce i dati della {@link #boardList}.*/
     private final DefaultListModel<String> boardListModel;
+    /** visualizza la lista degli utenti con cui condividere il to-do*/
     private JList<String> listUtenti;
+    /** DefaultListModel gestisce i dati della {@link #listUtenti}..*/
     private final DefaultListModel<String> listUtentiModel;
+    /** bottone per tornare alla finestra chiamante e chiudere questa finestra*/
     private JButton btnIndietro;
+    /** bottone per aggiungere la condivisione di un to-do con un utente selezionato*/
     private JButton btnAggiungiCondivisione;
+    /** bottone per rimuovere la condivisione di un to-do con un utente selezionato*/
     private JButton btnRimuoviCondivisione;
-    private Bacheca b;
-    private static final Logger logger = Logger.getLogger(BachecaGUI.class.getName());
+    /** titolo bacheca attualmente selezionata*/
+    private String titoloBachecaSelezionata;
 
-    public BachecaGUI(AppController controller, JFrame frameChiamante) throws SQLException {
+    /** logger per la registrazione di eventi e errori*/
+    private static final Logger logger = Logger.getLogger(GuiCondivisioni.class.getName());
+
+    /**
+     * costruttore che inizializza la finestra di dialogo, imposta dimensioni, contenuto, posizione rispetto alla finestra
+     * padre. Configura i modelli per le liste e carica i dati degli utenti. compone gli ActionListener
+     * @param controller istanza del controller per l'interazione con la logica dell'applicazione
+     * @param frameChiamante frame della finestra padre a cui si tornerà dopo la chiusura
+     * @throws SQLException se si verifica un errore sul caricamento dei dati dal database
+     */
+    public GuiCondivisioni(Controller controller, JFrame frameChiamante) throws SQLException {
         this.controller = controller;
         this.frameChiamante = frameChiamante;
-        frame = new JFrame("Gestione Bacheche");
+        frame = new JFrame("Gestione Condivisioni");
         frame.setContentPane(bachecaPanel);
         frame.setSize(600, 400);
         frame.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
@@ -52,31 +81,20 @@ public class BachecaGUI {
         aggiornaListaUtenti();
         aggiornaListaBacheche();
 
-        // Gestione eventi direttamente nel costruttore
-        todoList.addListSelectionListener(new ListSelectionListener() {
-            @Override
-            public void valueChanged(ListSelectionEvent e) {
-                if (!todoList.getValueIsAdjusting()) {
-                    String titoloToDo = todoList.getSelectedValue();
-                    if (b != null && titoloToDo != null) {
-                        controller.getToDoPerTitoloEBoard(titoloToDo, b.getTitoloBacheca());
-                    }
-                }
-            }
-        });
 
         boardList.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
                 if (!boardList.getValueIsAdjusting()) {
                     String titoloSelezionato = boardList.getSelectedValue();
-                    b = controller.getBachecaByTitolo(titoloSelezionato);
-                    if (b != null) {
-                        aggiornaListaToDo(b.getTitoloBacheca());
+                    if (titoloSelezionato != null) {
+                        titoloBachecaSelezionata = titoloSelezionato.split(" \\[Condivisa con:")[0].trim();
+                        aggiornaListaToDo(titoloBachecaSelezionata);
                     }
                 }
             }
         });
+
 
         btnIndietro.addActionListener(new ActionListener() {
             @Override
@@ -104,18 +122,24 @@ public class BachecaGUI {
         frame.setVisible(true);
     }
 
+    /**
+     * gestisce l'aggiunta o la rimozione delle condivisioni per utente, recupera utente e to-do e se non vengono mostrati
+     * errori da un errato utilizzo di selezioni viene delegata la logica al controller, se uno tra l'utente e il to-do non
+     * viene selezionato mostra messaggi di errore.
+     * @param aggiungi boolean true per aggiungere condivisioni, false per rimuoverle
+     */
     private void gestisciCondivisione(boolean aggiungi) {
         List<String> utentiSelezionati = listUtenti.getSelectedValuesList();
         String titoloToDo = todoList.getSelectedValue();
 
-        if (utentiSelezionati.isEmpty() || titoloToDo == null || b == null) {
+        if (utentiSelezionati.isEmpty() || titoloToDo == null || titoloBachecaSelezionata == null) {
             JOptionPane.showMessageDialog(frame, "Errore: Seleziona un To-Do e almeno un utente!");
             return;
         }
 
         try {
             String titoloPulito = titoloToDo.split(" \\[Condiviso con:")[0].trim();
-            ToDo todo = controller.getToDoPerTitoloEBoard(titoloPulito, b.getTitoloBacheca());
+            ToDo todo = controller.getToDoPerTitoloEBoard(titoloPulito, titoloBachecaSelezionata);
 
             if (todo != null) {
                 for (String utente : utentiSelezionati) {
@@ -127,15 +151,17 @@ public class BachecaGUI {
                 }
                 JOptionPane.showMessageDialog(frame, (aggiungi ? "To-Do condiviso con " : "Condivisioni rimosse per ") + String.join(", ", utentiSelezionati));
                 controller.caricaDatiUtente();
-                aggiornaListaToDo(b.getTitoloBacheca());
+                aggiornaListaToDo(titoloBachecaSelezionata);
             }
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(frame, "Errore: " + ex.getMessage());
-
         }
     }
 
-
+    /**
+     * aggiorna la lista degli utenti registrati, recupera tutti gli username degli utenti tramite il controller,
+     * li aggiunge alla lista escludendo l'utete attualmente loggato.
+     */
     private void aggiornaListaUtenti() {
         try {
             listUtentiModel.clear();
@@ -151,6 +177,13 @@ public class BachecaGUI {
         }
     }
 
+    /**
+     * Aggiorna la lista delle bacheche visualizzata in {@link #boardList}.
+     * Recupera la lista aggiornata delle bacheche dell'utente corrente tramite il {@link Controller}.
+     * Per ogni bacheca, costruisce una stringa che include il titolo della bacheca e se presenti,
+     * gli username degli utenti con cui i To-Do di quella bacheca sono condivisi.
+     * @throws SQLException Se si verifica un errore durante il recupero delle bacheche
+     */
     private void aggiornaListaBacheche() throws SQLException {
         boardListModel.clear();
         for (Bacheca bacheca : controller.getListaBachecheAggiornate()) {
@@ -161,7 +194,12 @@ public class BachecaGUI {
         }
     }
 
-
+    /**
+     * Aggiorna la lista dei To-Do visualizzata in {@link #todoList} per una bacheca specifica.
+     * Recupera i To-Do associati alla bacheca specificata dall'utente corrente.
+     * Ogni To-Do viene formattato in una stringa che include il suo titolo e se presente gli username degli utenti con cui è condiviso.
+     * @param titoloBacheca di cui aggiornare la lista di to-do
+     */
     public void aggiornaListaToDo(String titoloBacheca) {
         if (titoloBacheca != null && !titoloBacheca.isEmpty()) {
             Utente utenteCorrente = controller.getUtenteCorrente();
@@ -176,9 +214,19 @@ public class BachecaGUI {
             }
         }
     }
+
+    /**
+     * restituisce il jframe principale di quest'interfaccia
+     * @return {@link JFrame} corrente.
+     */
     public JFrame getFrame() {
         return frame;
     }
+
+    /**
+     * restituisce la lista che visualizza le bacheche
+     * @return {@link JList} delle bacheche.
+     */
     public JList<String> getBoardList() {
         return boardList;
     }

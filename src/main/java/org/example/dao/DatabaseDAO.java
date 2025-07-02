@@ -12,20 +12,19 @@ import java.util.List;
 public interface DatabaseDAO {
     boolean utenteEsiste(String username) throws SQLException;
     void salvaUtente(Utente utente) throws SQLException;
-    void aggiungiUtente(String username, String password) throws SQLException;
     Utente getUtenteByUsername(String username) throws SQLException;
     List<String> getListaUtenti() throws SQLException;
     void salvaBachechePredefinite(List<Bacheca> bacheche, String username) throws SQLException;
-    boolean haBachechePredefinite(String username) throws SQLException;
+    boolean mancaBachechePredefinite(String username) throws SQLException;
     boolean utenteHaBacheca(String username, String titoloBacheca) throws SQLException;
 
     List<ToDo> getToDoInScadenzaEntro(String username, LocalDate dataLimite) throws SQLException;
+    List<ToDo> getToDoInScadenzaOggi(String username) throws SQLException;
     List<ToDo> executeToDoQuery(PreparedStatement pstmt) throws SQLException;
     String getAutoreToDo(int idToDo) throws SQLException;
     List<String> getCondivisioniPerToDo(int idToDo) throws SQLException;
 
 
-    List<Bacheca> executeBachecaQuery(String query, String username) throws SQLException;
     Bacheca aggiungiBacheca(String titolo, String descrizione, String username)throws SQLException;
     void modificaBacheca(String titoloCorrente, String nuovoTitolo, String nuovaDescrizione, String username);
     void eliminaBacheca(String titolo, String username) throws SQLException;
@@ -42,8 +41,6 @@ public interface DatabaseDAO {
     void trasferisciToDo(ToDo todo, String titoloBachecaDestinazione) throws SQLException;
     List<Bacheca> getListaBachecheDalDB(String username) throws SQLException;
     void aggiornaOrdineToDo(int idToDo, int nuovaPosizione) throws SQLException;
-
-
 }
 
 

@@ -10,10 +10,10 @@ public class ConnessioneDatabase {
     // ATTRIBUTI
     private static ConnessioneDatabase instance;
     public Connection connection = null;
-    private String nome = "postgres";
-    private String password = "Lorenzo2004.";
-    private String url = "jdbc:postgresql://localhost:5432/ToDo project";
-    private String driver = "org.postgresql.Driver";
+    private static final String nome = "postgres";
+    private static final String password = "Lorenzo2004.";
+    private static final String url = "jdbc:postgresql://localhost:5432/ToDo project";
+    private static final String driver = "org.postgresql.Driver";
 
     // COSTRUTTORE
     private ConnessioneDatabase() throws SQLException {

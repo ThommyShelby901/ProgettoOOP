@@ -57,17 +57,6 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
 
-    @Override
-    public void aggiungiUtente(String username, String password) throws SQLException {
-        if (utenteEsiste(username)) {
-            return;
-        }
-        try (PreparedStatement pstmt = connection.prepareStatement("INSERT INTO utente (username, password) VALUES (?, ?)")) {
-            pstmt.setString(1, username);
-            pstmt.setString(2, password);
-            pstmt.executeUpdate();
-        }
-    }
 
     @Override
     public Utente getUtenteByUsername(String username) throws SQLException {
@@ -155,19 +144,20 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
 
 
     @Override
-    public boolean haBachechePredefinite(String username) throws SQLException {
+    public boolean mancaBachechePredefinite(String username) throws SQLException {
         String query = "SELECT COUNT(*) FROM bacheca WHERE username = ? AND titolo IN ('Università', 'Lavoro', 'Tempo Libero')";
         try (PreparedStatement stmt = connection.prepareStatement(query)) {
             stmt.setString(1, username);
             ResultSet rs = stmt.executeQuery();
             if (rs.next()) {
                 int count = rs.getInt(1);
-                // Considera che l'utente abbia le bacheche predefinite se ne ha almeno una
-                return count > 0;
+                // Ritorna true se l'utente NON ha bacheche predefinite (count == 0)
+                return count == 0;
             }
-            return false;
+            return true; // Se non trova niente, considera mancanti le bacheche
         }
     }
+
 
     @Override
     public void aggiornaOrdineToDo(int idToDo, int nuovaPosizione) throws SQLException {
@@ -283,7 +273,6 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
 
-
     @Override
     public List<ToDo> getTuttiToDo(String titoloBacheca, String username) throws SQLException {
         String query = "SELECT t.id_todo, t.titolo, t.descrizione, t.data_scadenza, t.url, t.stato, t.username, t.colore_sfondo, t.percorso_immagine, t.titolo_bacheca, t.ordine " +
@@ -317,43 +306,30 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
     }
 
-    @Override
-    public List<Bacheca> executeBachecaQuery(String query, String username) throws SQLException {
-        List<Bacheca> bacheche = new ArrayList<>();
 
-        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
-            // Validazione del parametro username
-            if (username != null && username.matches("\\w+")) {
-                pstmt.setString(1, username);
-            } else {
-                throw new IllegalArgumentException("Username non valido!");
-            }
-
-            try (ResultSet rs = pstmt.executeQuery()) { // Chiude automaticamente il ResultSet alla fine
-                while (rs.next()) {
-                    bacheche.add(new Bacheca(rs.getString(COL_TITOLO), rs.getString(COL_DESCRIZIONE)));
-                }
-            }
-        }
-
-        return bacheche;
-    }
 
     @Override
     public void aggiornaToDo(ToDo todo) throws SQLException {
         String query = "UPDATE todo SET titolo = ?, descrizione = ?, data_scadenza = ?, " +
-                "colore_sfondo = ?, percorso_immagine = ?, ordine = ? WHERE id_todo = ?";
+                "url = ?, stato = ?, colore_sfondo = ?, percorso_immagine = ?, ordine = ? " +
+                "WHERE id_todo = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, todo.getTitoloToDo());
             pstmt.setString(2, todo.getDescrizioneToDo());
             pstmt.setDate(3, todo.getDataScadenza() != null ?
                     java.sql.Date.valueOf(todo.getDataScadenza()) : null);
-            pstmt.setString(4, colorToHex(todo.getColoreSfondo()));
-            pstmt.setString(5, todo.getPercorsoImmagine());
-            pstmt.setInt(6, todo.getOrdine());  // Aggiunto campo ordine
-            pstmt.setInt(7, todo.getId());
-            pstmt.executeUpdate();
+            pstmt.setString(4, todo.getUrl());
+            pstmt.setString(5, todo.getStatoToDo().name());
+            pstmt.setString(6, colorToHex(todo.getColoreSfondo()));
+            pstmt.setString(7, todo.getPercorsoImmagine());
+            pstmt.setInt(8, todo.getOrdine());
+            pstmt.setInt(9, todo.getId());
+
+            int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected == 0) {
+                throw new SQLException("Nessun ToDo trovato con ID: " + todo.getId());
+            }
         }
     }
 
@@ -437,7 +413,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             pstmt.setInt(2, todo.getId());
             pstmt.executeUpdate();
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.log(Level.WARNING, "Errore trasferimento todo " + e.getMessage(), e);
         }
     }
 
@@ -453,6 +429,17 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             return executeToDoQuery(pstmt);
         }
     }
+
+    public List<ToDo> getToDoInScadenzaOggi(String username) throws SQLException {
+        String query = "SELECT id_todo, titolo, descrizione, data_scadenza, url, stato, colore_sfondo, percorso_immagine, ordine " +
+                "FROM todo WHERE username = ? AND data_scadenza = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setString(1, username);
+            pstmt.setDate(2, java.sql.Date.valueOf(LocalDate.now()));
+            return executeToDoQuery(pstmt);
+        }
+    }
+
 
 
 
@@ -495,7 +482,6 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             Utente autore = getUtenteByUsername(username);
             todo.setAutore(autore);
         }
-
         return todo;
     }
 
