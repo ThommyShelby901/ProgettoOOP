@@ -19,7 +19,6 @@ import java.util.List;
  */
 
 public class Controller {
-    // Componenti BCE
     private final DatabaseDAO dao;
     private GuiLogin guiLogin;
     private GuiHome guiHome;
@@ -36,8 +35,6 @@ public class Controller {
         guiLogin.mostra();
 
     }
-
-    // ==================== GESTIONE AUTENTICAZIONE ====================
 
     /**
      * se le credenziali sono valide, inizializza le {@link Bacheca bachece} dell'{@link Utente utente} e apre la {@link GuiHome homeframe}.
@@ -82,8 +79,6 @@ public class Controller {
         }
     }
 
-
-
     /**
      * gestisce il logout dell'utente attualmente loggato, resetta l'utente chiude la finestra principale
      * e apre una nuova finestra di login.
@@ -95,8 +90,6 @@ public class Controller {
         guiLogin = new GuiLogin(this);
         guiLogin.mostra();
     }
-
-    // ==================== GESTIONE BACHECHE ====================
 
     /**
      * restituisce la lista di {@link Bacheca bacheche} assoiate all'{@link #utenteCorrente utente attualmente loggato}.
@@ -149,7 +142,6 @@ public class Controller {
         }
     }
 
-
     /**
      * elimina una {@link Bacheca bacheca} dall'{@link #utenteCorrente utente corrente}, rimuove la bacheca dal model e dal DAO.
      * @param titolo titolo bacheca da eliminare
@@ -162,8 +154,6 @@ public class Controller {
         utenteCorrente.eliminaBacheca(titolo);
         dao.eliminaBacheca(titolo, utenteCorrente.getUsername());
     }
-
-    // ==================== GESTIONE TO-DO ====================
 
     /**
      * restituisce tutti i to-do associati a una {@link Bacheca bacheca} specifica dell'utente corrente
@@ -201,7 +191,9 @@ public class Controller {
         nuovoToDo.setDataScadenza(dataScadenza);
         nuovoToDo.setUrl(url);
         nuovoToDo.setStatoToDo(stato);
-        nuovoToDo.setColoreSfondo(colore);
+        String coloreHex = colorToHex(colore);
+        nuovoToDo.setColoreSfondo(coloreHex);
+
         nuovoToDo.setAutore(utenteCorrente);
 
         utenteCorrente.aggiungiToDo(nuovoToDo, titoloBacheca);
@@ -234,7 +226,11 @@ public class Controller {
         if (nuovaDataScadenza != null) todo.setDataScadenza(nuovaDataScadenza);
         if (nuovoUrl != null) todo.setUrl(nuovoUrl);
         if (nuovoStato != null) todo.setStatoToDo(nuovoStato);
-        if (nuovoColore != null) todo.setColoreSfondo(nuovoColore);
+        if (nuovoColore != null) {
+            String coloreHex = colorToHex(nuovoColore);
+            todo.setColoreSfondo(coloreHex);
+        }
+
 
         // Mantieni ordine o altre proprietà se necessario
         todo.setOrdine(todo.getOrdine());
@@ -304,7 +300,6 @@ public class Controller {
         if (bachecaDest == null) {
             throw new IllegalArgumentException("Bacheca destinazione non trovata");
         }
-        //  Chiama il metodo nel model SENZA controllo dell'autore
         utenteCorrente.trasferisciToDo(todo, nomeBachecaDestinazione);
 
         // Aggiorna il database
@@ -411,8 +406,6 @@ public class Controller {
         return result;
     }
 
-    // ==================== GESTIONE CONDIVISIONI ====================
-
     /**
      * gestisce le condivisioni di to-do tra utenti, verifica che il destinatario esista, che abbia le
      * bacheche predefinite e che possiede la bacheca specifica del to-do condiviso
@@ -468,8 +461,6 @@ public class Controller {
         if (todo == null) throw new IllegalArgumentException("ToDo non può essere null");
         dao.aggiornaToDo(todo);
     }
-
-    // ==================== METODI DI SUPPORTO ====================
 
     /**
      * assicura che le credenziali non siano vuote, controllo base prima di autenticazione o registrazione
@@ -582,8 +573,6 @@ public class Controller {
         }
     }
 
-    // ==================== GETTER ====================
-
     /**
      * restituisce l'oggetto utente attualmente loggato nel sistema
      * @return oggetto utente corrente, o null se è vuoto
@@ -618,6 +607,19 @@ public class Controller {
     }
 
     /**
+     * Converte un oggetto {@link Color} nel suo equivalente codice esadecimale HTML.
+     * Se il colore fornito è null, viene restituito il bianco ("#ffffff") come valore di default.
+     * Il formato restituito è "#rrggbb", dove rr, gg, e bb rappresentano i valori esadecimali
+     * a due cifre dei componenti rosso, verde e blu del colore.
+     * @param color l'oggetto {@code Color} da convertire; può essere {@code null}
+     * @return una stringa che rappresenta il colore in formato esadecimale HTML (es. "#1a2b3c")
+     */
+    private String colorToHex(Color color) {
+        if (color == null) return "#ffffff";
+        return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
+    }
+
+    /**
      * Recupera tutti i dettagli completi di un {@link ToDo to-do} specifico e li restituisce
      * sotto forma di una mappa di stringhe e oggetti. Serve per visualizzare tutte le informazioni di un to-do
      * in un'unica struttura. Per i campi che potrebbero essere null viene fornita una stringa "Nessuna" se il valore è assente.
@@ -627,24 +629,35 @@ public class Controller {
      * ("titolo", "descrizione", "dataScadenza", "coloreSfondo", "url", "percorsoImmagine")
      * e i valori sono gli oggetti corrispondenti ai dettagli del To-Do.
      * Se il To-Do non viene trovato, la mappa sarà vuota.
+     * @throws SQLException Se si verifica un errore durante l'accesso o la manipolazione del database.
      */
-    public Map<String, Object> getDettagliCompletiToDo(String titoloToDo, String titoloBacheca) {
+    public Map<String, Object> getDettagliCompletiToDo(String titoloToDo, String titoloBacheca) throws SQLException {
         Map<String, Object> dettagli = new HashMap<>();
 
-        ToDo todo = getToDoPerTitoloEBoard(titoloToDo, titoloBacheca);
+        ToDo todo = dao.getToDoPerTitoloEBacheca(titoloToDo, titoloBacheca); // ← carica i dati freschi!
+
         if (todo == null) return dettagli;
 
         dettagli.put("titolo", todo.getTitoloToDo());
         dettagli.put("descrizione", todo.getDescrizioneToDo() != null ? todo.getDescrizioneToDo() : "Nessuna");
-        dettagli.put("dataScadenza", todo.getDataScadenza() != null ? todo.getDataScadenza() : "Nessuna");
-        dettagli.put("coloreSfondo", todo.getColoreSfondo());
+
+        dettagli.put("coloreSfondo", todo.getColoreSfondo()); // String HEX
+
+
         dettagli.put("url", todo.getUrl());
         dettagli.put("percorsoImmagine", todo.getPercorsoImmagine());
 
         return dettagli;
     }
 
-
+    /**
+     * Formatta una lista di oggetti {@link ToDo} in una lista di stringhe leggibili.
+     * Ogni {@link ToDo} viene convertito in una stringa che include il suo titolo, la data di scadenza (se presente) e lo stato.
+     * Se la lista di input è vuota, restituisce una lista contenente un messaggio di "Nessun risultato trovato".
+     * @param risultati lista di oggetti {@link ToDo} da formattare.
+     * @return lista di stringhe, dove ogni stringa rappresenta un to-do formattato.
+     * La lista sarà vuota se l'input è nullo o vuoto.
+     */
     public List<String> formattaRisultati(List<ToDo> risultati) {
         List<String> listaFormattata = new ArrayList<>();
         if (risultati.isEmpty()) {
@@ -659,8 +672,4 @@ public class Controller {
         }
         return listaFormattata;
     }
-
-
-
-
 }

@@ -1,0 +1,7 @@
+org.example
+org.example.controller
+org.example.dao
+org.example.database
+org.example.gui
+org.example.implementazionepostgresdao
+org.example.model

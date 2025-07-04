@@ -237,8 +237,6 @@ public class Utente {
         return soloOggi;
     }
 
-
-
     /**
      * filtra e restituisce i to-do appartenenti a una bacheca ordinandoli per un'ordine ben preciso.
      * @param titoloBacheca bacheca su cui lavorare.

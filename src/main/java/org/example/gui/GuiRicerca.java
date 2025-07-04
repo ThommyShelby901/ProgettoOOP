@@ -136,7 +136,7 @@ public class GuiRicerca {
     /**
      * Aggiorna la lista dei risultati di ricerca con le stringhe formattate servite, aggiorna tutte le nuove righe,
      * è il punto in cui i dati vengono effettivamente visualizzati
-     * @param righe
+     * @param righe tutte le righe della lista
      */
     private void aggiornaListaRisultati(List<String> righe) {
         modelRisultati.clear();

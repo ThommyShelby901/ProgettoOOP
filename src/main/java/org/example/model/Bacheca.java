@@ -38,6 +38,7 @@ public class Bacheca {
     }
 
     /**
+     * Restituisce il nome attuale della bacheca.
      * @return nome attuale della bacheca.
      */
     public String getTitoloBacheca() {
@@ -53,7 +54,8 @@ public class Bacheca {
     }
 
     /**
-     * @return descrizione corrente
+     * Restituisce la descrizione corrente della bacheca.
+     * @return La stringa contenente la descrizione dettagliata della bacheca.
      */
     public String getDescrizioneBacheca() {
         return descrizioneBacheca;

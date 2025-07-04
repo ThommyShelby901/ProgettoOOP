@@ -1,6 +1,5 @@
 package org.example.model;
 
-import java.awt.*;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.ArrayList;
@@ -9,7 +8,6 @@ import java.util.ArrayList;
  * classe che rappresenta i to-do del nostro progetto, titolo, descrizione, data scadenza, stato, sono gli attributi
  * che possiamo assegnare a un to-do che sono associati a una bacheca e possono essere condivisi con altri utenti.
  */
-
 public class ToDo {
     private Utente autore;
     private String url;
@@ -21,7 +19,7 @@ public class ToDo {
     private int id;
     private String titoloBacheca;
     private int ordine;
-    private Color coloreSfondo;
+    private String coloreSfondo;
     private String percorsoImmagine;
 
     /**
@@ -168,14 +166,14 @@ public class ToDo {
      * <p>
      * Questo colore viene utilizzato per scopi di visualizzazione nell'interfaccia utente.
      * @return Un oggetto {@link java.awt.Color Color} per la visualizzazione dello sfondo */
-    public Color getColoreSfondo() { return coloreSfondo; }
+    public String getColoreSfondo() { return coloreSfondo; }
 
     /**
      * Imposta il colore di sfondo personalizzato per questo To-Do.
      * <p>
      * Accetta un oggetto {@link java.awt.Color Color} per personalizzare l'aspetto del To-Do.
      * @param coloreSfondo Il {@link java.awt.Color Color} da assegnare come sfondo.*/
-    public void setColoreSfondo(Color coloreSfondo) { this.coloreSfondo = coloreSfondo; }
+    public void setColoreSfondo(String coloreSfondo) { this.coloreSfondo = coloreSfondo; }
 
     /**
      * Restituisce il percorso file dell'immagine allegata a questo To-Do.

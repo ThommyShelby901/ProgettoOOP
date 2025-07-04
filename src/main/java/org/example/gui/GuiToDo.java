@@ -178,14 +178,18 @@ public class GuiToDo {
 
         StatoToDo stato = getStatoFromDialog();
         Color colore = getColorFromDialog();
-        if (colore == null) colore = t.getColoreSfondo();
+        if (colore == null) {
+            colore = Color.decode(t.getColoreSfondo()); // lo riconverti in Color se già salvato come String
+        }
+
+        String coloreHex = colorToHex(colore);
 
         t.setTitoloToDo(titolo);
         t.setDescrizioneToDo(descr);
         t.setDataScadenza(dataScad);
         t.setUrl(url);
         t.setStatoToDo(stato);
-        t.setColoreSfondo(colore);
+        t.setColoreSfondo(coloreHex);
 
         try {
             controller.modificaToDo(t, titolo, descr, dataScad, url, stato, colore);
@@ -196,10 +200,18 @@ public class GuiToDo {
             if (index >= 0) todoList.setSelectedIndex(index);
 
             info("To‑Do modificato con successo.");
+
+            visualizzaDettagli();
         } catch (SQLException ex) {
             errore(ex);
         }
     }
+
+    private String colorToHex(Color color) {
+        if (color == null) return "#ffffff"; // o un colore di default
+        return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
+    }
+
 
     /**
      * elimina un {@link ToDo} selezionato

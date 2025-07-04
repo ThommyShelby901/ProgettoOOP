@@ -107,11 +107,10 @@ public class GuiVisualizzazione {
         try {
             Map<String, Object> dettagli = controller.getDettagliCompletiToDo(titoloToDo, titoloBacheca);
 
-            pnlDettagliToDo.setBackground(
-                    dettagli.get("coloreSfondo") != null ?
-                            (Color) dettagli.get("coloreSfondo") :
-                            UIManager.getColor("Panel.background")
-            );
+
+                    String coloreHex = (String) dettagli.get("coloreSfondo");
+            Color colore = (coloreHex != null) ? Color.decode(coloreHex) : UIManager.getColor("Panel.background");
+            pnlDettagliToDo.setBackground(colore);
 
             lblTitolo.setText("Titolo: " + dettagli.getOrDefault("titolo", "N/A"));
             lblDescrizione.setText("Descrizione: " + dettagli.getOrDefault("descrizione", "Nessuna"));

@@ -7,7 +7,6 @@ import org.example.model.StatoToDo;
 import org.example.model.ToDo;
 import org.example.model.Utente;
 
-import java.awt.*;
 import java.sql.*;
 
 import java.time.LocalDate;
@@ -25,7 +24,6 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     private static final String COL_ID_TODO = "id_todo"; //  Costante a livello di classe
     private static final String COL_TITOLO = "titolo";
     private static final String COL_DESCRIZIONE = "descrizione";
-    private static final String DEFAULT_COLOR_HEX = "#FFFFFF";
     private static final String COL_PERCORSO_IMMAGINE = "percorso_immagine";
     private static final String COL_COLORE_SFONDO_NOME = "colore_sfondo";
     private static final String STATO = "stato";
@@ -43,9 +41,9 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * Verifica se quell'utente esiste già nel database.
+     * Verifica se quell'utente esiste già nel database eseguendo una query COUNT sulla tabella utente
      * @param username lo username dell'utente da controllare.
-     * @return true se l'utente esiste, false se non esiste
+     * @return true se l'utente esiste ovvero se il conteggio è maggiore di 0, false se non esiste
      * @throws SQLException se si verifica un errore durante l'accesso al database
      */
     @Override
@@ -59,7 +57,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * salva un nuovo utente nel database
+     * salva un nuovo utente nel database eseguendo una query insert sulla tabella utente
      * @param utente oggetto {@link Utente} da salvare
      * @throws SQLException se si verifica un errore durante l'accesso al database
      */
@@ -89,12 +87,13 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * aggiunge una nuova bacheca al database
+     * aggiunge una nuova bacheca al database. Dopo l'inserimento, restituisce un nuovo oggetto {@link Bacheca} creato
+     * con il titolo e la descrizione specificati.
      * @param titolo della bacheca
      * @param descrizione della bacheca
      * @param username dell'utente proprietario della bacheca
      * @return oggetto {@link Bacheca} che rappresenta la bacheca appena aggiunta
-     * @throws SQLException se si verifica un errore durante l'accesso al database
+     * @throws SQLException Se si verifica un errore durante l'esecuzione della query INSERT
      */
     @Override
     public Bacheca aggiungiBacheca(String titolo, String descrizione, String username) throws SQLException {
@@ -144,7 +143,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * elimina una bacheca esistente dal database
+     * elimina una bacheca esistente dal database, esegue una query delete ulla tabella bacheca
      * @param titolo della bacheca da eliminare
      * @param username dell'utente proprietario della bacheca
      * @throws SQLException se si verifica un errore durante l'accesso al database
@@ -176,7 +175,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
 
     /**
      * salva una lista di bacheche predefinite nel database per un determinato utente.
-     * Le bacheche verranno inserite solo se non esistono già
+     * Le bacheche verranno inserite solo se non esistono già combinazioni di titolo e username.
      * @param bacheche lista di oggetti {@link Bacheca} da salvare
      * @param username dell'utente a cui associare le bacheche
      * @throws SQLException se si verifica un errore durante l'accesso al database
@@ -198,6 +197,8 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
 
     /**
      * Verifica se all'utente mancano le bacheche predefinite ('Università', 'Lavoro', 'Tempo Libero').
+     * Il metodo restituisce true se il conteggio delle bacheche predefinite trovate è zero,
+     * indicando che l'utente non ne possiede ancora nessuna.
      * @param username dell'utente da controllare
      * @return true se almeno una bacheca manca per l'utente, false altrimenti
      * @throws SQLException se si verifica un errore durante l'accesso al database
@@ -218,7 +219,8 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * aggiorna la posizione(ordine) di un to-do nel database.
+     * aggiorna la posizione(ordine) di un to-do nel database. Esegue una query update sulla tabella to-do per modificare
+     * il campo ordine del to-do.
      * @param idToDo da aggiornare
      * @param nuovaPosizione da assegnare al to-do
      * @throws SQLException se si verifica un errore durante l'accesso al database
@@ -234,7 +236,8 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * recupera una lista di bacheche associate a un determinato username
+     * recupera una lista di bacheche associate a un determinato username, esegue una select sulla tabella bacheca
+     * per recuperare tutte le bacheche associate all'username fornito
      * @param username dell'utente per cui recuperare le bacheche
      * @return lista di oggetti {@link Bacheca} associati all'utente
      * @throws SQLException se si verifica un errore durante l'accesso al database
@@ -258,7 +261,9 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * recupera una lista di tutti gli username degli utenti presenti nel database
+     * recupera una lista di tutti gli username degli utenti presenti nel database.
+     * Questa implementazione esegue una query SELECT su tutta la tabella utente
+     * per ottenere tutti gli username.
      * @return lista di stringhe contenenti gli username degli utenti
      * @throws SQLException se si verifica un errore durante l'accesso al database
      */
@@ -357,7 +362,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             pstmt.setString(6, todo.getAutore().getUsername());
             pstmt.setString(7, titoloBacheca);
             pstmt.setInt(8, nuovoOrdine);
-            pstmt.setString(9, colorToHex(todo.getColoreSfondo()));
+            pstmt.setString(9,(todo.getColoreSfondo()));
 
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
@@ -368,7 +373,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
 
     /**
      * recupera una lista di tutti i to-do associati a una specifica bacheca per un dato utente.
-     * Include anche i to-do che sono stati condivisi con l'utente
+     * Esegue una select che include anche i to-do che sono stati condivisi con l'utente
      * @param titoloBacheca titolo della bacheca da cui recuperare i to-do
      * @param username dell'utente per cui recuperare i to-do
      * @return lista di oggetti {@link ToDo}
@@ -401,19 +406,36 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * converte un oggetto color in una stringa esadecimale, se il colore è nullo restituisce un colore esadecimale predefinito
-     * @param color oggetto color da convertire
-     * @return stringa che rappresenta il colore in formato esadecimale
+     * Recupera un oggetto to-do dal database in base al titolo del task e al titolo della bacheca.
+     * <p>
+     * Utilizza una query parametrizzata per prevenire SQL injection.
+     * @param titolo         il titolo del task da cercare
+     * @param titoloBacheca  il titolo della bacheca associata al task
+     * @return un oggetto {@code ToDo} se è stato trovato un risultato, altrimenti {@code null}
+     * @throws SQLException se si verifica un errore durante l'accesso al database
      */
-    private String colorToHex(Color color) {
-        if (color == null) {
-            return DEFAULT_COLOR_HEX;
+    @Override
+    public ToDo getToDoPerTitoloEBacheca(String titolo, String titoloBacheca) throws SQLException {
+        String query = "SELECT t.id_todo, t.titolo, t.descrizione, t.data_scadenza, t.url, t.stato, t.username, t.colore_sfondo, t.percorso_immagine, t.titolo_bacheca, t.ordine" +
+                " FROM todo WHERE titolo = ? AND titolo_bacheca = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(query)) {
+            pstmt.setString(1, titolo);
+            pstmt.setString(2, titoloBacheca);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return estraiToDoDaResultSet(rs); // usa il tuo metodo esistente per costruire il ToDo
+            }
         }
-        return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());
+        return null;
     }
 
+
     /**
-     * Aggiorna i dati di un to-do esistente nel database
+     * Esegue una query update sulla tabella to-do, aggiornando
+     * tutti i campi principali del to-do (titolo, descrizione, data di scadenza, URL, stato,
+     * colore di sfondo, percorso immagine e ordine) basandosi sull'ID del to-do.
+     * Il colore di sfondo dell'oggetto {@link ToDo} viene convertito in formato esadecimale
+     * prima di essere salvato.
      * @param todo oggetto {@link ToDo} con i dati aggiornati
      * @throws SQLException se si verifica un errore durante l'accesso al database
      */
@@ -430,7 +452,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
                     java.sql.Date.valueOf(todo.getDataScadenza()) : null);
             pstmt.setString(4, todo.getUrl());
             pstmt.setString(5, todo.getStatoToDo().name());
-            pstmt.setString(6, colorToHex(todo.getColoreSfondo()));
+            pstmt.setString(6, (todo.getColoreSfondo()));
             pstmt.setString(7, todo.getPercorsoImmagine());
             pstmt.setInt(8, todo.getOrdine());
             pstmt.setInt(9, todo.getId());
@@ -443,7 +465,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * recupera una lista di tutti i to-do associati a un username. Include sia i to-do di cui l'utente è l'autore
+     * recupera una lista di tutti i to-do associati a un username tramite una select. Include sia i to-do di cui l'utente è l'autore
      * sia quelli che gli sono stati condivisi
      * @param username username dell'utente per cui recuperare i to-do
      * @return una lista di oggetti {@link ToDo} associati all'utente
@@ -470,7 +492,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * recupera una lista di username con cui un to-do specifico è stato condiviso
+     * esegue una select sulla tabella condivisione, per recuperare tutti gli username associati all'id del to-do
      * @param idToDo id del to-do da cui recuperare le condivisione
      * @return lista di stringhe contenente gli username degli utenti con cui il to-do è condiviso
      * @throws SQLException Se si verifica un errore durante l'accesso al database
@@ -490,7 +512,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * Recupera lo username dell'autore di un ToDo specifico.
+     * Esegue una select sulla tabella todo per recuperare lo username associato all'id del to-do fornito
      * @param idToDo id del to-do di cui recuperare l'autore
      * @return lo username dell'autore del to-do
      * @throws SQLException Se si verifica un errore durante l'accesso al database
@@ -506,7 +528,8 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * elimina un to-do dal database tramite il suo titolo e il titolo della bacheca a cui appartiene
+     * elimina un to-do dal database , con una delete sulla tabella todo
+     * tramite il suo titolo e il titolo della bacheca a cui appartiene
      * @param titolo del to-do da eliminaere
      * @param titoloBacheca in cui il to-do è contenuto
      * @throws SQLException Se si verifica un errore durante l'accesso al database
@@ -523,7 +546,8 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * verifica se un utente è proprietario di una bacheca specifica
+     * verifica se un utente è proprietario di una bacheca specifica, esegue una query select count(*)
+     * sulla tabella bacheca filtrando per username e titolo, restituisce true se esiste almeno una tupla
      * @param username lo username dell'utente da controllare
      * @param titoloBacheca titolo della bacheca da verificare
      * @return true se l'utente è proprietario della bacheca, false altrimenti
@@ -562,7 +586,8 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * Recupera una lista di ToDo in scadenza entro una data limite per un utente specifico.
+     * Recupera una lista di to-do in scadenza entro una data limite per un utente specifico,
+     * tramite una select e una condizione dove datalimite sia minore o uguale alla data inserita
      * @param username dell'utente per cui recuperare i to-do
      * @param dataLimite data limite entro cui i to-do devono scadere
      * @return lista di oggetti {@link ToDo} in scadenza
@@ -580,7 +605,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * Recupera una lista di ToDo in scadenza oggi per un utente specifico.
+     * Recupera una lista di to-do in scadenza oggi per un utente specifico.
      * @param username dell'utente per cui recuperare i to-do
      * @return lista di oggetti {@link ToDo} in scadenza oggi
      * @throws SQLException Se si verifica un errore durante l'accesso al database
@@ -641,7 +666,8 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         todo.setPercorsoImmagine(rs.getString(COL_PERCORSO_IMMAGINE));
 
         String coloreHex = rs.getString(COL_COLORE_SFONDO_NOME);
-        todo.setColoreSfondo(coloreHex != null ? Color.decode(coloreHex) : Color.WHITE);
+        todo.setColoreSfondo(coloreHex != null ? coloreHex : "#ffffff");
+
 
         String username = rs.getString(USERNAME);
         if (username != null) {
