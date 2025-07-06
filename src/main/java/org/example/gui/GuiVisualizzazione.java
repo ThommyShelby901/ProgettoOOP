@@ -144,21 +144,25 @@ public class GuiVisualizzazione {
      * @param percorsoImmagine Il percorso del file immagine da caricare.
      */
     private void caricaImmagine(String percorsoImmagine) {
-        if (percorsoImmagine != null && !percorsoImmagine.isEmpty()) {
-            try {
-                ImageIcon icon = new ImageIcon(percorsoImmagine);
-                Image img = icon.getImage().getScaledInstance(300, 200, Image.SCALE_SMOOTH);
-                lblImmagine.setIcon(new ImageIcon(img));
-            } catch (Exception e) {
-                lblImmagine.setIcon(null);
-                JOptionPane.showMessageDialog(dialog,
-                        "Errore nel caricamento dell'immagine: " + e.getMessage(),
-                        ERRORE_TITOLO, JOptionPane.ERROR_MESSAGE);
-            }
-        } else {
+        if (percorsoImmagine == null || percorsoImmagine.trim().isEmpty()) {
             lblImmagine.setIcon(null);
+            lblImmagine.setText("Nessuna immagine");
+            lblImmagine.setHorizontalAlignment(SwingConstants.CENTER);
+            return;
+        }
+
+        try {
+            ImageIcon icon = new ImageIcon(percorsoImmagine);
+            Image scaledImage = icon.getImage().getScaledInstance(200, 200, Image.SCALE_SMOOTH);
+            lblImmagine.setIcon(new ImageIcon(scaledImage));
+            lblImmagine.setText(""); // Rimuove testo se presente
+        } catch (Exception _) {
+            lblImmagine.setIcon(null);
+            lblImmagine.setText("Errore nel caricamento dell'immagine");
         }
     }
+
+
 
     /**
      * Delega l'operazione di rimozione dell'immagine al {@link Controller}.

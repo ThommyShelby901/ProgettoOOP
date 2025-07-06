@@ -416,7 +416,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
      */
     @Override
     public ToDo getToDoPerTitoloEBacheca(String titolo, String titoloBacheca) throws SQLException {
-        String query = "SELECT t.id_todo, t.titolo, t.descrizione, t.data_scadenza, t.url, t.stato, t.username, t.colore_sfondo, t.percorso_immagine, t.titolo_bacheca, t.ordine" +
+        String query = "SELECT id_todo, titolo, descrizione, data_scadenza, url, stato, username, colore_sfondo, percorso_immagine, titolo_bacheca, ordine" +
                 " FROM todo WHERE titolo = ? AND titolo_bacheca = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
             pstmt.setString(1, titolo);

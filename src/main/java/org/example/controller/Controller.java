@@ -304,6 +304,7 @@ public class Controller {
 
         // Aggiorna il database
         dao.trasferisciToDo(todo, nomeBachecaDestinazione);
+        caricaDatiUtente();
     }
 
     /**
@@ -585,9 +586,10 @@ public class Controller {
      * @param bacheca di appartenenza
      * @return oggetto to-do trovato o null se non esiste
      */
-    public ToDo getToDoPerTitoloEBoard(String titolo, String bacheca) {
-        return utenteCorrente.cercaToDoPerTitoloEBoard(titolo, bacheca);
+    public ToDo getToDoPerTitoloEBoard(String titolo, String bacheca) throws SQLException {
+        return dao.getToDoPerTitoloEBacheca(titolo, bacheca);
     }
+
 
     /**
      * recupera gli username di tutti gli utenti registrati nel sistema, molto utile per selezionare un utente come nella condivisione di to-do

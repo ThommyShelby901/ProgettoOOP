@@ -151,6 +151,7 @@ public class GuiCondivisioni {
                 }
                 JOptionPane.showMessageDialog(frame, (aggiungi ? "To-Do condiviso con " : "Condivisioni rimosse per ") + String.join(", ", utentiSelezionati));
                 controller.caricaDatiUtente();
+                aggiornaListaBacheche();
                 aggiornaListaToDo(titoloBachecaSelezionata);
             }
         } catch (Exception ex) {

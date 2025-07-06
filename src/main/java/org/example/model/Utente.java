@@ -139,6 +139,7 @@ public class Utente {
         Objects.requireNonNull(nomeBachecaDestinazione, "Nome bacheca non può essere null");
 
         todo.setBacheca(nomeBachecaDestinazione);
+        aggiornaOrdineToDo(nomeBachecaDestinazione);
     }
 
     /**
