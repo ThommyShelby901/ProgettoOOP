@@ -149,7 +149,7 @@ public class GuiHome {
     private void gestisciLogout() {
         int conferma = JOptionPane.showConfirmDialog(frame, "Sei sicuro di voler uscire?", "Logout", JOptionPane.YES_NO_OPTION);
         if (conferma == JOptionPane.YES_OPTION) {
-            controller.handleLogout(); // Chiama il controller per gestire il logout
+            controller.logout(); // Chiama il controller per gestire il logout
             frame.dispose(); // Chiude la GuiHome corrente
         }
     }

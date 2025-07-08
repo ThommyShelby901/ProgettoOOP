@@ -83,7 +83,7 @@ public class Controller {
      * gestisce il logout dell'utente attualmente loggato, resetta l'utente chiude la finestra principale
      * e apre una nuova finestra di login.
      */
-    public void handleLogout() {
+    public void logout() {
         utenteCorrente = null;
         if (guiHome != null) guiHome.getFrame().dispose();
         if (guiLogin != null) guiLogin.chiudiFinestra();
@@ -550,7 +550,6 @@ public class Controller {
     /**
      * valida i campi essenziali per la creazione o modifica di to-do
      * @param titolo not null
-
      * @param bacheca not null
      */
     private void validaInputToDo(String titolo, String bacheca) {
@@ -636,15 +635,14 @@ public class Controller {
     public Map<String, Object> getDettagliCompletiToDo(String titoloToDo, String titoloBacheca) throws SQLException {
         Map<String, Object> dettagli = new HashMap<>();
 
-        ToDo todo = dao.getToDoPerTitoloEBacheca(titoloToDo, titoloBacheca); // ← carica i dati freschi!
+        ToDo todo = dao.getToDoPerTitoloEBacheca(titoloToDo, titoloBacheca);
 
         if (todo == null) return dettagli;
 
         dettagli.put("titolo", todo.getTitoloToDo());
         dettagli.put("descrizione", todo.getDescrizioneToDo() != null ? todo.getDescrizioneToDo() : "Nessuna");
 
-        dettagli.put("coloreSfondo", todo.getColoreSfondo()); // String HEX
-
+        dettagli.put("coloreSfondo", todo.getColoreSfondo()); // String hex
 
         dettagli.put("url", todo.getUrl());
         dettagli.put("percorsoImmagine", todo.getPercorsoImmagine());

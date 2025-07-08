@@ -117,7 +117,7 @@ public class Utente {
             return;
         }
 
-        listaToDo.remove(todo); // Rimuovi da listaToDo (che contiene tutti i to-do personali e condivisi)
+        listaToDo.remove(todo); // Rimuovi da listaToDo
 
         for (Utente u : todo.getCondivisoCon()) { // Rimuovi da eventuali utenti con cui è condiviso
             u.rimuoviToDoCondiviso(todo);

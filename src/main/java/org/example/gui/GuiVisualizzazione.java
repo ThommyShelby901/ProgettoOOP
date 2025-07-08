@@ -2,6 +2,12 @@ package org.example.gui;
 
 import org.example.controller.Controller;
 import org.example.model.ToDo;
+
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 
 
@@ -94,7 +100,6 @@ public class GuiVisualizzazione {
             }
         });
 
-
         dialog.setVisible(true);
     }
 
@@ -107,8 +112,7 @@ public class GuiVisualizzazione {
         try {
             Map<String, Object> dettagli = controller.getDettagliCompletiToDo(titoloToDo, titoloBacheca);
 
-
-                    String coloreHex = (String) dettagli.get("coloreSfondo");
+            String coloreHex = (String) dettagli.get("coloreSfondo");
             Color colore = (coloreHex != null) ? Color.decode(coloreHex) : UIManager.getColor("Panel.background");
             pnlDettagliToDo.setBackground(colore);
 
@@ -121,7 +125,19 @@ public class GuiVisualizzazione {
                 lblUrl.setText("<html><a href=''>" + url + "</a></html>");
                 lblUrl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 lblUrl.setForeground(Color.BLUE);
-                // aggiungi listener come prima
+
+                // Aggiungi MouseListener per gestire il click sul link
+                lblUrl.addMouseListener(new MouseAdapter() {
+                    @Override
+                    public void mouseClicked(MouseEvent e) {
+                        try {
+                            Desktop.getDesktop().browse(new URI(url));
+                        } catch (IOException | URISyntaxException ex) {
+                            JOptionPane.showMessageDialog(dialog, "Impossibile aprire il link: " + ex.getMessage(),
+                                    ERRORE_TITOLO, JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                });
             } else {
                 lblUrl.setText("Nessun link");
                 lblUrl.setCursor(Cursor.getDefaultCursor());
@@ -161,8 +177,6 @@ public class GuiVisualizzazione {
             lblImmagine.setText("Errore nel caricamento dell'immagine");
         }
     }
-
-
 
     /**
      * Delega l'operazione di rimozione dell'immagine al {@link Controller}.
