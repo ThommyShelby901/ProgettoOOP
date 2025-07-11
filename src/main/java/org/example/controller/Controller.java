@@ -25,7 +25,6 @@ public class Controller {
     private Utente utenteCorrente;
     private List<CheckList> checklistCorrente;
     private int idToDoCorrente;
-    private String titoloToDoCorrente;
 
     /**
      * costruttore per creare un'istanza della classe.

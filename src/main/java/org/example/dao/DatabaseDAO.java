@@ -14,11 +14,11 @@ public interface DatabaseDAO {
 
     List<CheckList> getChecklistByToDoId(int idToDo) throws SQLException;
 
-    public void aggiungiVoceChecklist(int idToDo, String descrizione, StatoCheck stato) throws SQLException;
+    void aggiungiVoceChecklist(int idToDo, String descrizione, StatoCheck stato) throws SQLException;
 
-    public void modificaVoceChecklist(int idChecklist, String nuovaDescrizione, StatoCheck nuovoStato) throws SQLException;
+    void modificaVoceChecklist(int idChecklist, String nuovaDescrizione, StatoCheck nuovoStato) throws SQLException;
 
-    public void eliminaVoceChecklist(int idChecklist) throws SQLException;
+    void eliminaVoceChecklist(int idChecklist) throws SQLException;
     /**
      * Verifica se un utente esiste nel database basandosi sul suo username.
      * @param username Lo username dell'utente da controllare.
