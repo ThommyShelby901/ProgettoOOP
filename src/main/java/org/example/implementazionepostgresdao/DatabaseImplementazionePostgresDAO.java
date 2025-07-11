@@ -2,10 +2,7 @@ package org.example.implementazionepostgresdao;
 
 import org.example.dao.DatabaseDAO;
 import org.example.database.ConnessioneDatabase;
-import org.example.model.Bacheca;
-import org.example.model.StatoToDo;
-import org.example.model.ToDo;
-import org.example.model.Utente;
+import org.example.model.*;
 
 import java.sql.*;
 
@@ -675,5 +672,58 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             todo.setAutore(autore);
         }
         return todo;
+    }
+
+    public List<CheckList> getChecklistByToDoId(int idToDo) throws SQLException {
+        List<CheckList> lista = new ArrayList<>();
+        String sql = "SELECT idChecklist, id_todo, descrizione, statocheck FROM CHECKLIST WHERE id_todo = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, idToDo);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    CheckList item = new CheckList();
+                    item.setIdCheckList(rs.getInt("idChecklist"));
+                    item.setIdToDo(rs.getInt(COL_ID_TODO));
+                    item.setDescrizione(rs.getString("descrizione"));
+
+                    String statoStr = rs.getString("statocheck");
+                    StatoCheck stato = StatoCheck.valueOf(statoStr);
+                    item.setStato(stato);
+
+                    lista.add(item);
+                }
+            }
+        }
+        return lista;
+    }
+
+
+    public void aggiungiVoceChecklist(int idToDo, String descrizione, StatoCheck stato) throws SQLException {
+        String sql = "INSERT INTO CHECKLIST (id_todo, descrizione, statocheck) VALUES (?, ?, ?::stato_check)";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, idToDo);
+            ps.setString(2, descrizione);
+            ps.setString(3, stato.name()); // scrivi il valore enum come stringa
+            ps.executeUpdate();
+        }
+    }
+
+
+    public void modificaVoceChecklist(int idChecklist, String nuovaDescrizione, StatoCheck nuovoStato) throws SQLException {
+        String sql = "UPDATE CHECKLIST SET descrizione = ?, statocheck = ?::stato_check WHERE idChecklist = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, nuovaDescrizione);
+            ps.setString(2, nuovoStato.name());
+            ps.setInt(3, idChecklist);
+            ps.executeUpdate();
+        }
+    }
+
+    public void eliminaVoceChecklist(int idChecklist) throws SQLException {
+        String sql = "DELETE FROM CHECKLIST WHERE idChecklist = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, idChecklist);
+            ps.executeUpdate();
+        }
     }
 }

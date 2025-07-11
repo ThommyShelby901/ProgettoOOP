@@ -1,8 +1,6 @@
 package org.example.dao;
 
-import org.example.model.Bacheca;
-import org.example.model.ToDo;
-import org.example.model.Utente;
+import org.example.model.*;
 
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
@@ -13,6 +11,14 @@ import java.util.List;
  * interfaccia DAO per l'accesso ai dati del database
  */
 public interface DatabaseDAO {
+
+    List<CheckList> getChecklistByToDoId(int idToDo) throws SQLException;
+
+    public void aggiungiVoceChecklist(int idToDo, String descrizione, StatoCheck stato) throws SQLException;
+
+    public void modificaVoceChecklist(int idChecklist, String nuovaDescrizione, StatoCheck nuovoStato) throws SQLException;
+
+    public void eliminaVoceChecklist(int idChecklist) throws SQLException;
     /**
      * Verifica se un utente esiste nel database basandosi sul suo username.
      * @param username Lo username dell'utente da controllare.

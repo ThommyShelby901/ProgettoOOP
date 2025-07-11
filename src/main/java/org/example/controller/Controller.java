@@ -23,6 +23,9 @@ public class Controller {
     private GuiLogin guiLogin;
     private GuiHome guiHome;
     private Utente utenteCorrente;
+    private List<CheckList> checklistCorrente;
+    private int idToDoCorrente;
+    private String titoloToDoCorrente;
 
     /**
      * costruttore per creare un'istanza della classe.
@@ -33,6 +36,7 @@ public class Controller {
         this.dao = dao;
         this.guiLogin =new GuiLogin(this);
         guiLogin.mostra();
+        this.checklistCorrente = new ArrayList<>();
 
     }
 
@@ -231,10 +235,10 @@ public class Controller {
             todo.setColoreSfondo(coloreHex);
         }
 
-
         // Mantieni ordine o altre proprietà se necessario
         todo.setOrdine(todo.getOrdine());
         dao.aggiornaToDo(todo);
+        caricaDatiUtente(); // AGGIUNGI QUESTO
     }
 
     /**
@@ -672,4 +676,79 @@ public class Controller {
         }
         return listaFormattata;
     }
+
+    public void setToDoCorrente(int idToDo) {
+        this.idToDoCorrente = idToDo;
+        this.checklistCorrente = caricaChecklistDaDB(idToDo);
+    }
+
+
+
+    private List<CheckList> caricaChecklistDaDB(int idToDo) {
+        try {
+            return dao.getChecklistByToDoId(idToDo);
+        } catch (SQLException e) {
+            e.printStackTrace(); // o gestione migliore
+            return new ArrayList<>();
+        }
+    }
+
+    public List<CheckList> getChecklistPerToDo() {
+        if (checklistCorrente == null) {
+            setToDoCorrente(idToDoCorrente);
+        }
+        return checklistCorrente;
+    }
+
+
+    public void aggiungiVoceChecklist(String descrizione) {
+        if (descrizione == null || descrizione.trim().isEmpty()) {
+            throw new IllegalArgumentException("La voce non può essere vuota");
+        }
+
+        try {
+            // Stato di default INCOMPLETO per nuova voce
+            dao.aggiungiVoceChecklist(idToDoCorrente, descrizione.trim(), StatoCheck.INCOMPLETO);
+            this.checklistCorrente = dao.getChecklistByToDoId(idToDoCorrente); // ricarica aggiornata
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void modificaVoceChecklist(String vecchiaDescrizione, String nuovaDescrizione, StatoCheck nuovoStato) {
+        if (nuovaDescrizione == null || nuovaDescrizione.trim().isEmpty()) {
+            throw new IllegalArgumentException("La voce non può essere vuota");
+        }
+
+        CheckList voce = checklistCorrente.stream()
+                .filter(c -> c.getDescrizione().equals(vecchiaDescrizione))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Voce non trovata"));
+
+        try {
+            dao.modificaVoceChecklist(voce.getIdCheckList(), nuovaDescrizione.trim(), nuovoStato);
+            this.checklistCorrente = dao.getChecklistByToDoId(idToDoCorrente); // aggiorna
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
+    public void eliminaVoceChecklist(String descrizione) {
+        CheckList voce = checklistCorrente.stream()
+                .filter(c -> c.getDescrizione().equals(descrizione))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Voce non trovata"));
+
+        try {
+            dao.eliminaVoceChecklist(voce.getIdCheckList());
+            this.checklistCorrente = dao.getChecklistByToDoId(idToDoCorrente); // aggiorna
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+
 }

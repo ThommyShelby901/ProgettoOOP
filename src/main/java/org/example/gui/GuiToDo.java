@@ -46,6 +46,8 @@ public class GuiToDo {
     private JButton btnVisualizzaToDo;
     /** bottone per aggiungere o rimuovere un'immagine da un to-do*/
     private JButton btnAggiungiImmagine;
+    private JButton btnGestisciChecklist;
+
 
     /** il jframe principale di questa finestra dei to-do*/
     private final JFrame frame;
@@ -92,9 +94,26 @@ public class GuiToDo {
             frameChiamante.setVisible(true);
             frame.dispose();
         }});
+        btnGestisciChecklist.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ToDo t = toDoSelezionato();
+                if (t == null) return;
+                controller.setToDoCorrente(t.getId());
+
+                apriGuiChecklist(t);
+            }
+        });
+
 
         frame.setVisible(true);
     }
+
+    private void apriGuiChecklist(ToDo t) {
+        new GuiCheckList(controller, t.getTitoloToDo());
+    }
+
+
 
     /**
      * Carica e aggiorna la lista dei {@link ToDo} visualizzati nella {@link #todoList} recuperandoli dal {@link Controller} per la bacheca corrente
@@ -201,7 +220,6 @@ public class GuiToDo {
 
             info("To‑Do modificato con successo.");
 
-            visualizzaDettagli();
         } catch (SQLException ex) {
             errore(ex);
         }
