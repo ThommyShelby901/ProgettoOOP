@@ -66,12 +66,8 @@ public class CheckList {
 
     @Override
     public String toString() {
-        return "CheckList{" +
-                "idCheckList=" + idCheckList +
-                ", descrizione='" + descrizione + '\'' +
-                ", completato=" + completato +
-                ", idToDo=" + idToDo +
-                '}';
+        return "[" + stato.toString() + "] " + descrizione;
     }
+
 }
 

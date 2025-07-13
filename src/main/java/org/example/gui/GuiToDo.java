@@ -109,16 +109,19 @@ public class GuiToDo {
         frame.setVisible(true);
     }
 
+    /**
+     * Apre la finestra grafica per la gestione della checklist associata a un to-do specifico.
+     * Dopo eventuali modifiche alla checklist, aggiorna automaticamente la lista dei to-do.
+     * @param t Il {@link ToDo} per cui aprire la finestra di gestione della checklist.
+     */
     private void apriGuiChecklist(ToDo t) {
-        new GuiCheckList(controller, t.getTitoloToDo());
+        new GuiCheckList(controller, t.getTitoloToDo(), this::aggiornaLista);
     }
-
-
 
     /**
      * Carica e aggiorna la lista dei {@link ToDo} visualizzati nella {@link #todoList} recuperandoli dal {@link Controller} per la bacheca corrente
      */
-    private void aggiornaLista() {
+    protected void aggiornaLista() {
         modello.clear();
         try {
             List<ToDo> lista = controller.getToDoPerBacheca(titoloBacheca);
@@ -225,6 +228,12 @@ public class GuiToDo {
         }
     }
 
+    /**
+     * Converte un oggetto {@link Color} in una stringa esadecimale nel formato HTML.
+     * Se il colore è null, restituisce il colore bianco di default ("#ffffff").
+     * @param color Il colore da convertire.
+     * @return Una stringa esadecimale che rappresenta il colore.
+     */
     private String colorToHex(Color color) {
         if (color == null) return "#ffffff"; // o un colore di default
         return String.format("#%02x%02x%02x", color.getRed(), color.getGreen(), color.getBlue());

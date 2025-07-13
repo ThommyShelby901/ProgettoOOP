@@ -237,7 +237,7 @@ public class Controller {
         // Mantieni ordine o altre proprietà se necessario
         todo.setOrdine(todo.getOrdine());
         dao.aggiornaToDo(todo);
-        caricaDatiUtente(); // AGGIUNGI QUESTO
+        caricaDatiUtente();
     }
 
     /**
@@ -676,22 +676,35 @@ public class Controller {
         return listaFormattata;
     }
 
+    /**
+     * Imposta il to-do corrente per il quale gestire la checklist.
+     * Carica la checklist associata dal database.
+     * @param idToDo ID del to-do da impostare come corrente
+     */
     public void setToDoCorrente(int idToDo) {
         this.idToDoCorrente = idToDo;
         this.checklistCorrente = caricaChecklistDaDB(idToDo);
     }
 
-
-
+    /**
+     * Carica la checklist di un to-do dal database.
+     * In caso di errore SQL restituisce una lista vuota.
+     * @param idToDo ID del to-do per cui caricare la checklist
+     * @return lista delle voci della checklist (vuota se errore)
+     */
     private List<CheckList> caricaChecklistDaDB(int idToDo) {
         try {
             return dao.getChecklistByToDoId(idToDo);
-        } catch (SQLException e) {
-            e.printStackTrace(); // o gestione migliore
+        } catch (SQLException _) {
             return new ArrayList<>();
         }
     }
 
+    /**
+     * Restituisce la checklist corrente per il to-do impostato.
+     * Se la checklist non è stata ancora caricata, la carica da DB.
+     * @return lista delle voci della checklist correntemente caricate
+     */
     public List<CheckList> getChecklistPerToDo() {
         if (checklistCorrente == null) {
             setToDoCorrente(idToDoCorrente);
@@ -699,22 +712,32 @@ public class Controller {
         return checklistCorrente;
     }
 
-
-    public void aggiungiVoceChecklist(String descrizione) {
+    /**
+     * Aggiunge una nuova voce alla checklist del to-do corrente.
+     * La nuova voce è inserita con stato INCOMPLETO.
+     * @param descrizione descrizione della nuova voce da aggiungere
+     * @throws IllegalArgumentException se la descrizione è nulla o vuota
+     * @throws SQLException se si verifica un errore nel database
+     */
+    public void aggiungiVoceChecklist(String descrizione) throws SQLException {
         if (descrizione == null || descrizione.trim().isEmpty()) {
             throw new IllegalArgumentException("La voce non può essere vuota");
         }
-
-        try {
-            // Stato di default INCOMPLETO per nuova voce
-            dao.aggiungiVoceChecklist(idToDoCorrente, descrizione.trim(), StatoCheck.INCOMPLETO);
-            this.checklistCorrente = dao.getChecklistByToDoId(idToDoCorrente); // ricarica aggiornata
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        dao.aggiungiVoceChecklist(idToDoCorrente, descrizione.trim(), StatoCheck.INCOMPLETO);
+        this.checklistCorrente = dao.getChecklistByToDoId(idToDoCorrente);
     }
 
-    public void modificaVoceChecklist(String vecchiaDescrizione, String nuovaDescrizione, StatoCheck nuovoStato) {
+    /**
+     * Modifica una voce esistente nella checklist del to-do corrente.
+     * Cerca la voce tramite la vecchia descrizione, la aggiorna con nuova descrizione e stato.
+     * Dopo la modifica aggiorna lo stato del to-do se necessario.
+     * @param vecchiaDescrizione descrizione attuale della voce da modificare
+     * @param nuovaDescrizione nuova descrizione da impostare
+     * @param nuovoStato nuovo stato della voce (es. COMPLETATO, INCOMPLETO)
+     * @throws IllegalArgumentException se la nuova descrizione è nulla, vuota, o la voce non viene trovata
+     * @throws SQLException se si verifica un errore nel database
+     */
+    public void modificaVoceChecklist(String vecchiaDescrizione, String nuovaDescrizione, StatoCheck nuovoStato) throws SQLException {
         if (nuovaDescrizione == null || nuovaDescrizione.trim().isEmpty()) {
             throw new IllegalArgumentException("La voce non può essere vuota");
         }
@@ -724,30 +747,46 @@ public class Controller {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Voce non trovata"));
 
-        try {
-            dao.modificaVoceChecklist(voce.getIdCheckList(), nuovaDescrizione.trim(), nuovoStato);
-            this.checklistCorrente = dao.getChecklistByToDoId(idToDoCorrente); // aggiorna
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        dao.modificaVoceChecklist(voce.getIdCheckList(), nuovaDescrizione.trim(), nuovoStato);
+        this.checklistCorrente = dao.getChecklistByToDoId(idToDoCorrente); // ricarica
+
+        ToDo todo = dao.getToDoById(idToDoCorrente);  // prendi il ToDo dal db
+        aggiornaStatoToDoSeNecessario(todo);
     }
 
+    /**
+     * Controlla e aggiorna lo stato del to-do corrente in base allo stato delle voci della checklist.
+     * Se tutte le voci sono completate, imposta lo stato del to-do a COMPLETATO, altrimenti NONCOMPLETATO.
+     * Aggiorna il database e la GUI di conseguenza.
+     * @param todo oggetto to-do corrente da aggiornare
+     * @throws SQLException se si verifica un errore nel database
+     */
+    private void aggiornaStatoToDoSeNecessario(ToDo todo) throws SQLException {
+        boolean tutteCompletate = dao.tutteChecklistCompletate(idToDoCorrente);
+        StatoToDo nuovoStato = tutteCompletate ? StatoToDo.COMPLETATO : StatoToDo.NONCOMPLETATO;
 
+        dao.impostaStatoToDo(idToDoCorrente, nuovoStato);
 
-    public void eliminaVoceChecklist(String descrizione) {
+        todo.setStatoToDo(nuovoStato);
+
+        dao.aggiornaToDo(todo);
+
+        caricaDatiUtente();
+    }
+
+    /**
+     * Elimina una voce dalla checklist del to-do corrente cercandola tramite la descrizione.
+     * @param descrizione descrizione della voce da eliminare
+     * @throws IllegalArgumentException se la voce non viene trovata
+     * @throws SQLException se si verifica un errore nel database
+     */
+    public void eliminaVoceChecklist(String descrizione) throws SQLException {
         CheckList voce = checklistCorrente.stream()
                 .filter(c -> c.getDescrizione().equals(descrizione))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Voce non trovata"));
 
-        try {
-            dao.eliminaVoceChecklist(voce.getIdCheckList());
-            this.checklistCorrente = dao.getChecklistByToDoId(idToDoCorrente); // aggiorna
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        dao.eliminaVoceChecklist(voce.getIdCheckList());
+        this.checklistCorrente = dao.getChecklistByToDoId(idToDoCorrente); // aggiorna
     }
-
-
-
 }

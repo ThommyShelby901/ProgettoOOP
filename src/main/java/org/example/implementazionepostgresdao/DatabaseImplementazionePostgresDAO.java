@@ -336,7 +336,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     public void creaToDo(ToDo todo, String titoloBacheca) throws SQLException {
         String getMaxOrdineQuery = "SELECT COALESCE(MAX(ordine), 0) FROM todo WHERE titolo_bacheca = ? AND username = ?";
         String insertQuery = "INSERT INTO todo (titolo, descrizione, data_scadenza, url, stato, username, titolo_bacheca, ordine, colore_sfondo) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id_todo";
+                "VALUES (?, ?, ?, ?, ?::stato_todo, ?, ?, ?, ?) RETURNING id_todo";
 
         int nuovoOrdine = 1;
 
@@ -439,7 +439,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     @Override
     public void aggiornaToDo(ToDo todo) throws SQLException {
         String query = "UPDATE todo SET titolo = ?, descrizione = ?, data_scadenza = ?, " +
-                "url = ?, stato = ?, colore_sfondo = ?, percorso_immagine = ?, ordine = ? " +
+                "url = ?, stato = ?::stato_todo, colore_sfondo = ?, percorso_immagine = ?, ordine = ? " +
                 "WHERE id_todo = ?";
 
         try (PreparedStatement pstmt = connection.prepareStatement(query)) {
@@ -448,8 +448,8 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             pstmt.setDate(3, todo.getDataScadenza() != null ?
                     java.sql.Date.valueOf(todo.getDataScadenza()) : null);
             pstmt.setString(4, todo.getUrl());
-            pstmt.setString(5, todo.getStatoToDo().name());
-            pstmt.setString(6, (todo.getColoreSfondo()));
+            pstmt.setString(5, todo.getStatoToDo().name()); // stringa enum
+            pstmt.setString(6, todo.getColoreSfondo());
             pstmt.setString(7, todo.getPercorsoImmagine());
             pstmt.setInt(8, todo.getOrdine());
             pstmt.setInt(9, todo.getId());
@@ -460,6 +460,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             }
         }
     }
+
 
     /**
      * recupera una lista di tutti i to-do associati a un username tramite una select. Include sia i to-do di cui l'utente è l'autore
@@ -509,7 +510,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     }
 
     /**
-     * Esegue una select sulla tabella todo per recuperare lo username associato all'id del to-do fornito
+     * Esegue una select sulla tabella to-do per recuperare lo username associato all'id del to-do fornito
      * @param idToDo id del to-do di cui recuperare l'autore
      * @return lo username dell'autore del to-do
      * @throws SQLException Se si verifica un errore durante l'accesso al database
@@ -674,6 +675,14 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         return todo;
     }
 
+    /**
+     * Recupera tutte le voci della checklist associate a un to.o specificato.
+     * Esegue una query sul database per ottenere le voci.
+     *
+     * @param idToDo identificativo del to-do di interesse
+     * @return lista di oggetti CheckList corrispondenti al to-do
+     * @throws SQLException se si verifica un errore nell'accesso al database
+     */
     public List<CheckList> getChecklistByToDoId(int idToDo) throws SQLException {
         List<CheckList> lista = new ArrayList<>();
         String sql = "SELECT idChecklist, id_todo, descrizione, statocheck FROM CHECKLIST WHERE id_todo = ?";
@@ -684,7 +693,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
                     CheckList item = new CheckList();
                     item.setIdCheckList(rs.getInt("idChecklist"));
                     item.setIdToDo(rs.getInt(COL_ID_TODO));
-                    item.setDescrizione(rs.getString("descrizione"));
+                    item.setDescrizione(rs.getString(COL_DESCRIZIONE));
 
                     String statoStr = rs.getString("statocheck");
                     StatoCheck stato = StatoCheck.valueOf(statoStr);
@@ -697,7 +706,14 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         return lista;
     }
 
-
+    /**
+     * Inserisce una nuova voce nella checklist di un to-do.
+     * Utilizza una query parametrizzata per evitare SQL Injection.
+     * @param idToDo ID del to-do a cui associare la nuova voce
+     * @param descrizione testo della voce
+     * @param stato stato iniziale (es. INCOMPLETO)
+     * @throws SQLException se l'inserimento nel database fallisce
+     */
     public void aggiungiVoceChecklist(int idToDo, String descrizione, StatoCheck stato) throws SQLException {
         String sql = "INSERT INTO CHECKLIST (id_todo, descrizione, statocheck) VALUES (?, ?, ?::stato_check)";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -708,7 +724,14 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         }
     }
 
-
+    /**
+     * Aggiorna i dati di una voce della checklist identificata da idChecklist.
+     * Modifica sia descrizione che stato.
+     * @param idChecklist ID della voce da modificare
+     * @param nuovaDescrizione nuovo testo da impostare
+     * @param nuovoStato nuovo stato da impostare
+     * @throws SQLException in caso di errore nel database
+     */
     public void modificaVoceChecklist(int idChecklist, String nuovaDescrizione, StatoCheck nuovoStato) throws SQLException {
         String sql = "UPDATE CHECKLIST SET descrizione = ?, statocheck = ?::stato_check WHERE idChecklist = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -719,11 +742,79 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
         }
     }
 
+    /**
+     * Elimina una voce della checklist dal database.
+     * @param idChecklist ID della voce da eliminare
+     * @throws SQLException in caso di errore durante l'eliminazione
+     */
     public void eliminaVoceChecklist(int idChecklist) throws SQLException {
         String sql = "DELETE FROM CHECKLIST WHERE idChecklist = ?";
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
             ps.setInt(1, idChecklist);
             ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Verifica se tutte le voci della checklist associate a un to-do sono completate.
+     * La query conta le voci che non sono "COMPLETATO". Se zero, tutte sono completate.
+     * @param idToDo ID del to-do
+     * @return true se tutte le voci sono completate, false altrimenti
+     * @throws SQLException se la query fallisce
+     */
+    public boolean tutteChecklistCompletate(int idToDo) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM CHECKLIST WHERE id_todo = ? AND statocheck <> 'COMPLETATO'";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setInt(1, idToDo);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int countNonCompletati = rs.getInt(1);
+                    return countNonCompletati == 0;  // true se nessuno è incompleto
+                }
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Imposta il nuovo stato di un to-do.
+     * @param idToDo ID del to-do
+     * @param nuovoStato nuovo stato da impostare
+     * @throws SQLException in caso di errore durante l'aggiornamento
+     */
+    public void impostaStatoToDo(int idToDo, StatoToDo nuovoStato) throws SQLException {
+        String sql = "UPDATE TODO SET stato = ?::stato_todo WHERE id_todo = ?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, nuovoStato.name());
+            ps.setInt(2, idToDo);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Recupera un to-do tramite il suo ID.
+     * Se non trovato, restituisce null.
+     * @param idToDo ID del to-do da recuperare
+     * @return to-do trovato o null
+     * @throws SQLException se si verifica un errore nel database
+     */
+    public ToDo getToDoById(int idToDo) throws SQLException {
+        String sql = "SELECT id_todo, titolo, descrizione, stato::text FROM todo WHERE id_todo = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setInt(1, idToDo);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    ToDo todo = new ToDo();
+                    todo.setId(rs.getInt(COL_ID_TODO));
+                    todo.setTitoloToDo(rs.getString(COL_TITOLO));
+                    todo.setDescrizioneToDo(rs.getString(COL_DESCRIZIONE));
+                    todo.setStatoToDo(StatoToDo.valueOf(rs.getString(STATO)));
+                    return todo;
+                } else {
+                    return null;
+                }
+            }
         }
     }
 }

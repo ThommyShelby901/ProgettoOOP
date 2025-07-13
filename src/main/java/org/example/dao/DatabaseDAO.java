@@ -12,13 +12,64 @@ import java.util.List;
  */
 public interface DatabaseDAO {
 
+    /**
+     * Recupera un to-do tramite il suo ID.
+     * @param idToDo ID del to-do
+     * @return to-do trovato o null
+     * @throws SQLException se si verifica un errore nel database
+     */
+    ToDo getToDoById(int idToDo) throws SQLException;
+
+    /**
+     * Ottiene tutte le voci della checklist di un to-do specificato.
+     * @param idToDo ID del to-do
+     * @return Lista delle voci della checklist
+     * @throws SQLException se si verifica un errore nel database
+     */
     List<CheckList> getChecklistByToDoId(int idToDo) throws SQLException;
 
+    /**
+     * Aggiunge una voce alla checklist di un to-do.
+     *
+     * @param idToDo ID del to-do
+     * @param descrizione testo della voce
+     * @param stato stato iniziale della voce
+     * @throws SQLException se si verifica un errore nel database
+     */
     void aggiungiVoceChecklist(int idToDo, String descrizione, StatoCheck stato) throws SQLException;
 
+    /**
+     * Modifica una voce della checklist.
+     * @param idChecklist ID della voce
+     * @param nuovaDescrizione nuovo testo della voce
+     * @param nuovoStato nuovo stato della voce
+     * @throws SQLException se si verifica un errore nel database
+     */
     void modificaVoceChecklist(int idChecklist, String nuovaDescrizione, StatoCheck nuovoStato) throws SQLException;
 
+    /**
+     * Rimuove una voce dalla checklist.
+     * @param idChecklist ID della voce da rimuovere
+     * @throws SQLException se si verifica un errore nel database
+     */
     void eliminaVoceChecklist(int idChecklist) throws SQLException;
+
+    /**
+     * Aggiorna lo stato di un to-do.
+     * @param idToDo ID del to-do
+     * @param nuovoStato nuovo stato da impostare
+     * @throws SQLException se si verifica un errore nel database
+     */
+    void impostaStatoToDo(int idToDo, StatoToDo nuovoStato) throws SQLException;
+
+    /**
+     * Controlla se tutte le voci della checklist sono completate.
+     * @param idToDo ID del to-do
+     * @return true se tutte completate, false altrimenti
+     * @throws SQLException se si verifica un errore nel database
+     */
+    boolean tutteChecklistCompletate(int idToDo) throws SQLException;
+
     /**
      * Verifica se un utente esiste nel database basandosi sul suo username.
      * @param username Lo username dell'utente da controllare.
