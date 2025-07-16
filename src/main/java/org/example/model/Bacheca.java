@@ -13,7 +13,7 @@ import java.util.List;
 public class Bacheca {
     private String titoloBacheca;
     private String descrizioneBacheca;
-    private final List<String> listaCondivisioni; // username con cui sono condivisi i to-do
+    private final List<String> listaCondivisioni;
 
     /**
      * crea una nuova bacheca vuota

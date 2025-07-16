@@ -8,7 +8,6 @@ package org.example.model;
 public class CheckList {
     private int idCheckList;
     private String descrizione;
-    private boolean completato;
     int idToDo;
     private StatoCheck stato;
 
@@ -58,22 +57,6 @@ public class CheckList {
      */
     public void setDescrizione(String descrizione) {
         this.descrizione = descrizione;
-    }
-
-    /**
-     * Indica se la voce è completata.
-     * @return true se completata, false altrimenti
-     */
-    public boolean isCompletato() {
-        return completato;
-    }
-
-    /**
-     * Imposta il flag di completamento della voce.
-     * @param completato true per completata, false altrimenti
-     */
-    public void setCompletato(boolean completato) {
-        this.completato = completato;
     }
 
     /**
