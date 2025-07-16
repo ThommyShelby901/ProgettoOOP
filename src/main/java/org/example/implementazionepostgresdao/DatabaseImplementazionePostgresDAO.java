@@ -18,7 +18,7 @@ import java.util.logging.Logger;
  */
 public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
     private final Connection connection;
-    private static final String COL_ID_TODO = "id_todo"; //  Costante a livello di classe
+    private static final String COL_ID_TODO = "id_todo";
     private static final String COL_TITOLO = "titolo";
     private static final String COL_DESCRIZIONE = "descrizione";
     private static final String COL_PERCORSO_IMMAGINE = "percorso_immagine";
@@ -294,7 +294,7 @@ public class DatabaseImplementazionePostgresDAO implements DatabaseDAO {
             checkStmt.setString(2, nomeUtente);
             ResultSet rs = checkStmt.executeQuery();
             if (rs.next() && rs.getInt(1) > 0) {
-                return; // 🔥 Evita duplicati
+                return;
             }
         }
 
