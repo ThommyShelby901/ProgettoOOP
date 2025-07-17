@@ -1,8 +1,5 @@
 package org.example.model;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Classe che rappresenta una bacheca contenitore di to-do, i to-do al suo interno possono essere condivisi individualmente.\
  * <p>
@@ -13,7 +10,7 @@ import java.util.List;
 public class Bacheca {
     private String titoloBacheca;
     private String descrizioneBacheca;
-    private final List<String> listaCondivisioni;
+
 
     /**
      * crea una nuova bacheca vuota
@@ -26,16 +23,9 @@ public class Bacheca {
     public Bacheca( String titoloBacheca, String descrizioneBacheca) {
         this.titoloBacheca = titoloBacheca;
         this.descrizioneBacheca = descrizioneBacheca;
-        this.listaCondivisioni= new ArrayList<>();
     }
 
-    /**
-     * lista di utenti con il quale sono condivisi i to-do della bacheca, la condivisione è gestita a livello di singolo to-do
-     * @return lista di username (vuota se nessun to-do è stato condiviso)
-     */
-    public List<String> getListaCondivisioni() {
-        return listaCondivisioni;
-    }
+
 
     /**
      * Restituisce il nome attuale della bacheca.
