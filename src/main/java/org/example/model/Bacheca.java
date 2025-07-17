@@ -15,7 +15,6 @@ public class Bacheca {
     /**
      * crea una nuova bacheca vuota
      * <p>
-     * Durante la creazione, la {@link #listaCondivisioni lista di username condivisi}
      * viene inizializzata come una {@link java.util.ArrayList ArrayList} vuota.
      * @param titoloBacheca nome identificativo dell'attività della bacheca
      * @param descrizioneBacheca scopo della bacheca
