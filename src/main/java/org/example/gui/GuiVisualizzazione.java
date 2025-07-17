@@ -1,7 +1,7 @@
 package org.example.gui;
 
 import org.example.controller.Controller;
-import org.example.model.ToDo;
+
 
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -18,7 +18,7 @@ import java.awt.event.ActionListener;
 import java.sql.SQLException;
 
 /**
- * Questa classe rappresenta una finestra di dialogo modale utilizzata per visualizzare i dettagli completi di un {@link ToDo} specifico.
+ * Questa classe rappresenta una finestra di dialogo modale utilizzata per visualizzare i dettagli completi di un to-do specifico.
  * permette di visualizzare titolo, descrizione, data scaenza, url, colore sfondo e immagine se presente.
  * Quindi tutti gli attributi sono visualizzati in questa finestra, lo stato è visualizzato direttamente nella rappresentazione
  * testuale del to-do nella home.
@@ -86,8 +86,7 @@ public class GuiVisualizzazione {
             @Override
             public void actionPerformed(ActionEvent e) {
                 try {
-                    ToDo todo = controller.getToDoPerTitoloEBoard(titoloToDo, titoloBacheca);
-                    if (todo.getPercorsoImmagine() == null || todo.getPercorsoImmagine().isEmpty()) {
+                    if (!controller.todoHaImmagine(titoloToDo, titoloBacheca)) {
                         JOptionPane.showMessageDialog(dialog, "Nessuna immagine presente per questo ToDo",
                                 "Informazione", JOptionPane.INFORMATION_MESSAGE);
                     } else {
@@ -99,6 +98,7 @@ public class GuiVisualizzazione {
                 }
             }
         });
+
 
         dialog.setVisible(true);
     }
@@ -193,5 +193,4 @@ public class GuiVisualizzazione {
                     ERRORE_TITOLO, JOptionPane.ERROR_MESSAGE);
         }
     }
-
 }

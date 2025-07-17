@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * questa classe è il cervello del nostro programma, fa da intermediario tra la GUI e il model, e collega il DAO.
@@ -36,7 +37,6 @@ public class Controller {
         this.guiLogin =new GuiLogin(this);
         guiLogin.mostra();
         this.checklistCorrente = new ArrayList<>();
-
     }
 
     /**
@@ -288,6 +288,58 @@ public class Controller {
     }
 
     /**
+     * Restituisce la lista dei titoli di tutte le bacheche aggiornate.
+     * @return lista di titoli delle bacheche presenti nel sistema
+     * @throws SQLException in caso di errore nell'accesso al database
+     */
+    public List<String> getTitoliBacheche() throws SQLException {
+        List<String> titoli = new ArrayList<>();
+        for (Bacheca b : getListaBachecheAggiornate()) {
+            titoli.add(b.getTitoloBacheca());
+        }
+        return titoli;
+    }
+
+    /**
+     * Verifica se un to-do specificato da titolo e bacheca ha un'immagine associata.
+     * @param titoloToDo il titolo del ToDo da verificare
+     * @param titoloBacheca il titolo della bacheca a cui appartiene il ToDo
+     * @return {@code true} se il ToDo ha un percorso immagine non nullo e non vuoto, {@code false} altrimenti
+     * @throws SQLException in caso di errore nell'accesso al database
+     */
+    public boolean todoHaImmagine(String titoloToDo, String titoloBacheca) throws SQLException {
+        ToDo todo = getToDoPerTitoloEBoard(titoloToDo, titoloBacheca);
+        return todo.getPercorsoImmagine() != null && !todo.getPercorsoImmagine().isEmpty();
+    }
+
+    /**
+     * Restituisce un array di stringhe contenenti i titoli dei ToDo associati a una bacheca,
+     * formattati con l'indicazione degli utenti con cui sono condivisi.
+     *
+     * @param titoloBacheca il titolo della bacheca per cui filtrare i ToDo
+     * @return array di stringhe contenenti i titoli dei ToDo formattati;
+     *         array vuoto se l'utente corrente non è definito o se il titolo della bacheca è nullo o vuoto
+     */
+    public String[] getToDoFormattatiPerBacheca(String titoloBacheca) {
+        Utente utenteAttuale = getUtenteCorrente();
+        if (utenteAttuale == null || titoloBacheca == null || titoloBacheca.isEmpty()) {
+            return new String[0];
+        }
+        List<ToDo> listaFiltrata = utenteAttuale.getToDoPerBacheca(titoloBacheca);
+        return listaFiltrata.stream()
+                .map(todo -> {
+                    if (todo.getCondivisoCon().isEmpty()) {
+                        return todo.getTitoloToDo();
+                    } else {
+                        String condivisi = todo.getCondivisoCon().stream()
+                                .map(Utente::getUsername)
+                                .collect(Collectors.joining(", "));
+                        return todo.getTitoloToDo() + " [Condiviso con: " + condivisi + "]";
+                    }
+                })
+                .toArray(String[]::new);
+    }
+    /**
      * trasferisce un {@link ToDo to-do} da una {@link Bacheca bacheca} all'altra
      * @param todo da trasferire
      * @param nomeBachecaDestinazione titolo bacheca di destinazione.
@@ -391,7 +443,7 @@ public class Controller {
         return result;
     }
 
-     /**
+    /**
      * recupera i {@link ToDo to-do} dell'utente in scadenza entro una certa data, il metodo verifica che i to-do in scadenza sono
      * già presenti nella lista dell'utente.
      * @param dataLimite entro cui devono scadere i to-do
@@ -674,6 +726,62 @@ public class Controller {
             }
         }
         return listaFormattata;
+    }
+
+    /**
+     * Cerca i to-do il cui titolo contiene la stringa indicata e restituisce una lista
+     * di titoli formattati.
+     *
+     * @param titolo la stringa da cercare nel titolo dei to-do
+     * @return lista di titoli to-do formattati corrispondenti alla ricerca
+     */
+    public List<String> cercaToDoPerTitoloFormattati(String titolo) {
+        List<ToDo> risultati = cercaToDoPerTitolo(titolo);
+        return formattaRisultati(risultati);
+    }
+
+    /**
+     * Restituisce la lista dei to-do che scadono entro la data limite specificata,
+     * formattati come stringhe.
+     * @param dataLimite la data entro cui i ToDo devono scadere (inclusa)
+     * @return lista di ToDo formattati in scadenza entro la data indicata
+     * @throws SQLException in caso di errore nell'accesso al database
+     */
+    public List<String> getToDoInScadenzaEntroFormattati(LocalDate dataLimite) throws SQLException {
+        List<ToDo> risultati = getToDoInScadenzaEntro(dataLimite);
+        return formattaRisultati(risultati);
+    }
+
+    /**
+     * Restituisce la lista dei to-do in scadenza nella data odierna, formattati come stringhe.
+     * @return lista di ToDo formattati in scadenza oggi
+     * @throws SQLException in caso di errore nell'accesso al database
+     */
+    public List<String> getToDoInScadenzaOggiFormattati() throws SQLException {
+        List<ToDo> risultati = getToDoInScadenzaOggi();
+        return formattaRisultati(risultati);
+    }
+
+    /**
+     * Gestisce la condivisione di un to-do aggiungendo o rimuovendo utenti con cui è condiviso.
+     * @param titoloToDo il titolo del ToDo da modificare
+     * @param titoloBacheca il titolo della bacheca a cui appartiene il ToDo
+     * @param utentiSelezionati lista degli username degli utenti da aggiungere o rimuovere dalla condivisione
+     * @param aggiungi se {@code true} aggiunge gli utenti, se {@code false} li rimuove
+     * @throws SQLException in caso di errore nell'accesso al database
+     * @throws IllegalArgumentException se il ToDo specificato non viene trovato
+     */
+    public void gestisciCondivisioneToDo(String titoloToDo, String titoloBacheca, List<String> utentiSelezionati, boolean aggiungi) throws SQLException {
+        ToDo todo = getToDoPerTitoloEBoard(titoloToDo, titoloBacheca);
+        if (todo == null) throw new IllegalArgumentException("ToDo non trovato");
+
+        for (String utente : utentiSelezionati) {
+            if (aggiungi) {
+                aggiungiCondivisione(todo, utente);
+            } else {
+                rimuoviCondivisione(todo, utente);
+            }
+        }
     }
 
     /**

@@ -1,9 +1,7 @@
 package org.example.gui;
 
 import org.example.controller.Controller;
-import org.example.model.Bacheca;
-import org.example.model.ToDo;
-import org.example.model.Utente;
+
 
 import javax.swing.*;
 import javax.swing.event.ListSelectionEvent;
@@ -14,7 +12,6 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 /**
  * Questa classe gestisce l'interfaccia utente per le condivisioni con altri utenti. Ci permette di visualizzare una bacheca corrente,
@@ -138,25 +135,20 @@ public class GuiCondivisioni {
 
         try {
             String titoloPulito = titoloToDo.split(" \\[Condiviso con:")[0].trim();
-            ToDo todo = controller.getToDoPerTitoloEBoard(titoloPulito, titoloBachecaSelezionata);
 
-            if (todo != null) {
-                for (String utente : utentiSelezionati) {
-                    if (aggiungi) {
-                        controller.aggiungiCondivisione(todo, utente);
-                    } else {
-                        controller.rimuoviCondivisione(todo, utente);
-                    }
-                }
-                JOptionPane.showMessageDialog(frame, (aggiungi ? "To-Do condiviso con " : "Condivisioni rimosse per ") + String.join(", ", utentiSelezionati));
-                controller.caricaDatiUtente();
-                aggiornaListaBacheche();
-                aggiornaListaToDo(titoloBachecaSelezionata);
-            }
+            controller.gestisciCondivisioneToDo(titoloPulito, titoloBachecaSelezionata, utentiSelezionati, aggiungi);
+
+            JOptionPane.showMessageDialog(frame, (aggiungi ? "To-Do condiviso con " : "Condivisioni rimosse per ") + String.join(", ", utentiSelezionati));
+
+            controller.caricaDatiUtente();
+            aggiornaListaBacheche();
+            aggiornaListaToDo(titoloBachecaSelezionata);
+
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(frame, "Errore: " + ex.getMessage());
         }
     }
+
 
     /**
      * aggiorna la lista degli utenti registrati, recupera tutti gli username degli utenti tramite il controller,
@@ -186,11 +178,8 @@ public class GuiCondivisioni {
      */
     private void aggiornaListaBacheche() throws SQLException {
         boardListModel.clear();
-        for (Bacheca bacheca : controller.getListaBachecheAggiornate()) {
-            String condivisioniText = bacheca.getListaCondivisioni().isEmpty()
-                    ? ""
-                    : " [Condivisa con: " + String.join(", ", bacheca.getListaCondivisioni()) + "]";
-            boardListModel.addElement(bacheca.getTitoloBacheca() + condivisioniText);
+        for (String titolo : controller.getTitoliBacheche()) {
+            boardListModel.addElement(titolo);
         }
     }
 
@@ -202,18 +191,11 @@ public class GuiCondivisioni {
      */
     public void aggiornaListaToDo(String titoloBacheca) {
         if (titoloBacheca != null && !titoloBacheca.isEmpty()) {
-            Utente utenteCorrente = controller.getUtenteCorrente();
-            if (utenteCorrente != null) {
-                List<ToDo> listaFiltrata = utenteCorrente.getToDoPerBacheca(titoloBacheca);
-                String[] todoTitles = listaFiltrata.stream()
-                        .map(todo -> todo.getCondivisoCon().isEmpty() ? todo.getTitoloToDo() :
-                                todo.getTitoloToDo() + " [Condiviso con: " +
-                                        todo.getCondivisoCon().stream().map(Utente::getUsername).collect(Collectors.joining(", ")) + "]")
-                        .toArray(String[]::new);
-                todoList.setListData(todoTitles);
-            }
+            String[] todoTitles = controller.getToDoFormattatiPerBacheca(titoloBacheca);
+            todoList.setListData(todoTitles);
         }
     }
+
 
     /**
      * restituisce il jframe principale di quest'interfaccia

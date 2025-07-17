@@ -1,7 +1,6 @@
 package org.example.gui;
 
 import org.example.controller.Controller;
-import org.example.model.Bacheca;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -210,13 +209,14 @@ public class GuiHome {
     public void aggiornaListaBacheche() {
         bachecaListModel.clear();
         try {
-            for (Bacheca board : controller.getListaBachecheAggiornate()) {
-                bachecaListModel.addElement(board.getTitoloBacheca());
+            for (String titolo : controller.getTitoliBacheche()) {
+                bachecaListModel.addElement(titolo);
             }
         } catch (SQLException _) {
             JOptionPane.showMessageDialog(frame, "Errore nel recupero delle bacheche dal database");
         }
     }
+
 
     /**
      *  Restituisce il {@link JFrame} principale di questa interfaccia Home. Utile per finestre modali

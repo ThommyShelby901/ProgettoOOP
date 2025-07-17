@@ -1,7 +1,6 @@
 package org.example.gui;
 
 import org.example.controller.Controller;
-import org.example.model.ToDo;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
@@ -95,8 +94,7 @@ public class GuiRicerca {
             return;
         }
         try {
-            List<ToDo> risultati = controller.cercaToDoPerTitolo(titolo);
-            List<String> righeFormattate = controller.formattaRisultati(risultati);
+            List<String> righeFormattate = controller.cercaToDoPerTitoloFormattati(titolo);
             aggiornaListaRisultati(righeFormattate);
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(dialog, "Errore durante la ricerca: " + ex.getMessage(), MESSAGGIO_ERRORE, JOptionPane.ERROR_MESSAGE);
@@ -110,8 +108,7 @@ public class GuiRicerca {
     private void cercaPerData() {
         try {
             LocalDate data = LocalDate.parse(txtData.getText().trim());
-            List<ToDo> risultati = controller.getToDoInScadenzaEntro(data);
-            List<String> righeFormattate = controller.formattaRisultati(risultati);
+            List<String> righeFormattate = controller.getToDoInScadenzaEntroFormattati(data);
             aggiornaListaRisultati(righeFormattate);
         } catch (Exception _) {
             JOptionPane.showMessageDialog(dialog, "Formato data non valido (AAAA-MM-GG)", MESSAGGIO_ERRORE, JOptionPane.ERROR_MESSAGE);
@@ -124,8 +121,7 @@ public class GuiRicerca {
      */
     private void mostraScadenzeOggi() {
         try {
-            List<ToDo> risultati = controller.getToDoInScadenzaOggi();
-            List<String> righeFormattate = controller.formattaRisultati(risultati);
+            List<String> righeFormattate = controller.getToDoInScadenzaOggiFormattati();
             aggiornaListaRisultati(righeFormattate);
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(dialog, "Errore durante la ricerca: " + ex.getMessage(), MESSAGGIO_ERRORE, JOptionPane.ERROR_MESSAGE);

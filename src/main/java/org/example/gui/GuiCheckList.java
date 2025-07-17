@@ -22,7 +22,7 @@ public class GuiCheckList {
     private final JFrame frame;
     private JPanel mainPanel;
     JPanel panel1;
-     JPanel panel2;
+    JPanel panel2;
     JScrollPane j;
     private JList<CheckList> checklistList;
     private final DefaultListModel<CheckList> checklistModel;
@@ -181,4 +181,3 @@ public class GuiCheckList {
         }
     }
 }
-
