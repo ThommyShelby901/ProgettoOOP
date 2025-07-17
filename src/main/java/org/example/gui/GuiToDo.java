@@ -72,7 +72,9 @@ public class GuiToDo {
         this.frameChiamante=frameChiamante;
         this.titoloBacheca=titoloBacheca;
 
-        frame = new JFrame("Gestione To‑Do – " + titoloBacheca); //titolo dinamico in base alla bacheca
+        this.frame = frameChiamante;
+        frame.setTitle("Gestione To‑Do – " + titoloBacheca);
+
         frame.setContentPane(todoPanel);
         frame.setSize(650, 440);
         frame.setLocationRelativeTo(null);
@@ -90,10 +92,13 @@ public class GuiToDo {
         btnVediCondivisioni.addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) { apriGestioneCondivisioni(); }});
         btnVisualizzaToDo.addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) { visualizzaDettagli(); }});
         btnAggiungiImmagine.addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) { aggiungiImmagine(); }});
-        btnIndietro.addActionListener(new ActionListener() { public void actionPerformed(ActionEvent e) {
-            frameChiamante.setVisible(true);
-            frame.dispose();
-        }});
+        btnIndietro.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                new GuiHome(controller, frame); // resetta il contenuto del frame alla home
+            }
+        });
+
         btnGestisciChecklist.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -453,4 +458,18 @@ public class GuiToDo {
     private void errore(Exception e) {
         JOptionPane.showMessageDialog(frame, e.getMessage(), "Errore", JOptionPane.ERROR_MESSAGE);
     }
+
+    /**
+     * Mostra la finestra di gestione dei To-Do per una specifica bacheca.
+     * Questo metodo crea una nuova istanza di {@link GuiToDo} utilizzando il controller
+     * dell'applicazione, il frame esistente (per riutilizzare la stessa finestra)
+     * e il titolo della bacheca da visualizzare.
+     * @param controller l'istanza del {@link Controller} per la gestione della logica dell'applicazione
+     * @param frame il {@link JFrame} principale condiviso tra le GUI, usato per mostrare la finestra To-Do
+     * @param titoloBacheca il titolo della bacheca di cui si vogliono gestire i To-Do
+     */
+    public static void mostra(Controller controller, JFrame frame, String titoloBacheca) {
+        new GuiToDo(controller, frame, titoloBacheca);
+    }
+
 }

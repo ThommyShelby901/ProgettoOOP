@@ -125,13 +125,13 @@ public class GuiHome {
             public void actionPerformed(ActionEvent e) {
                 String selezionata = bacList.getSelectedValue();
                 if (selezionata != null) {
-                    new GuiToDo(controller, frame, selezionata);
-                    frame.setVisible(false);
+                    GuiToDo.mostra(controller, frame, selezionata); // usa il metodo statico per chiarezza
                 } else {
                     JOptionPane.showMessageDialog(frame, "Seleziona una bacheca da visualizzare");
                 }
             }
         });
+
 
         btnCercaToDo.addActionListener(new ActionListener() {
             @Override
@@ -218,7 +218,6 @@ public class GuiHome {
             JOptionPane.showMessageDialog(frame, "Errore nel recupero delle bacheche dal database");
         }
     }
-
 
     /**
      *  Restituisce il {@link JFrame} principale di questa interfaccia Home. Utile per finestre modali
