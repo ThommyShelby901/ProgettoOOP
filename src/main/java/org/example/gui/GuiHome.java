@@ -57,6 +57,8 @@ public class GuiHome {
         this.controller = controller;
         this.frame = frameChiamante;
 
+        frame.setTitle("Bacheche");
+
         frame.setContentPane(homePanel);
         frame.setSize(800, 600);
         frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
